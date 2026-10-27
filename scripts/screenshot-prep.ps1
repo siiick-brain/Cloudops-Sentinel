@@ -1,6 +1,10 @@
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
+$python = Join-Path $root ".venv\Scripts\python.exe"
+if (-not (Test-Path $python)) {
+    throw "Create the project virtual environment before preparing screenshots."
+}
 
 $previousMode = [Environment]::GetEnvironmentVariable("INTEGRATION_MODE", "Process")
 $env:INTEGRATION_MODE = "mock"
@@ -13,12 +17,12 @@ try {
     docker compose up -d --build
     if ($LASTEXITCODE -ne 0) { throw "Compose start failed" }
     Write-Output "Waiting for API readiness"
-    python scripts/wait_for_stack.py
+    & $python scripts/wait_for_stack.py
     if ($LASTEXITCODE -ne 0) { throw "Stack did not become healthy" }
     Write-Output "Sending steady traffic"
-    $loadgen = Start-Process -FilePath python -ArgumentList "scripts/loadgen.py" -WorkingDirectory $root -PassThru
+    $loadgen = Start-Process -FilePath $python -ArgumentList "scripts/loadgen.py" -WorkingDirectory $root -PassThru
     Write-Output "Triggering a latency scenario"
-    python chaos/run.py latency
+    & $python chaos/run.py latency
     if ($LASTEXITCODE -ne 0) { throw "Chaos scenario failed" }
     Stop-Process -Id $loadgen.Id -ErrorAction SilentlyContinue
     $loadgen = $null

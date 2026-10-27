@@ -62,6 +62,12 @@ app = FastAPI(title="CloudOps Sentinel alert router", lifespan=lifespan)
 def validate_configuration() -> None:
     if JIRA_MODE not in {"mock", "real"}:
         raise RuntimeError("INTEGRATION_MODE must be mock or real")
+    global _jira_auth, _jira_base, _slack_url
+    if JIRA_MODE == "mock":
+        _jira_auth = None
+        _jira_base = "http://mock-jira:8080"
+        _slack_url = "http://mock-slack:8080/webhook"
+        return
     if JIRA_MODE == "real":
         required = (
             "JIRA_BASE_URL",
@@ -73,7 +79,6 @@ def validate_configuration() -> None:
         missing = [key for key in required if not os.getenv(key)]
         if missing:
             raise RuntimeError(f"Real integrations require: {', '.join(missing)}")
-        global _jira_auth, _jira_base, _slack_url
         _jira_base = os.environ["JIRA_BASE_URL"].rstrip("/")
         _jira_auth = (os.environ["JIRA_EMAIL"], os.environ["JIRA_API_TOKEN"])
         _slack_url = os.environ["SLACK_WEBHOOK_URL"]
@@ -393,4 +398,3 @@ def _process_group(alerts: list[dict[str, Any]]) -> list[dict[str, str | None]]:
 
 
 instrument(app, "alert-router")
-

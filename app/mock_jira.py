@@ -16,6 +16,7 @@ def health() -> dict[str, str]:
 
 
 @app.get("/rest/api/3/search")
+@app.get("/rest/api/3/search/jql")
 def search(jql: str = "") -> dict[str, object]:
     matching = [
         {"key": key, "fields": issue["fields"]}

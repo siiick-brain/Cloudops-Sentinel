@@ -83,6 +83,13 @@ def test_mock_jira_create_search_comment_transition():
         == 1
     )
     assert (
+        client.get(
+            "/rest/api/3/search/jql",
+            params={"jql": 'project = "MOCK" AND labels = "fp-test"'},
+        ).json()["total"]
+        == 1
+    )
+    assert (
         client.post("/rest/api/3/issue/MOCK-1/comment", json={"body": "repeat"}).status_code == 200
     )
     assert client.get("/rest/api/3/issue/MOCK-1/transitions").json()["transitions"][0]["id"] == "31"

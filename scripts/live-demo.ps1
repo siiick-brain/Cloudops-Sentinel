@@ -1,6 +1,10 @@
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
+$python = Join-Path $root ".venv\Scripts\python.exe"
+if (-not (Test-Path $python)) {
+    throw "Create the project virtual environment before running the live demo."
+}
 if (-not (Test-Path .env)) {
     Write-Output "Not verified: create .env with Jira Cloud and Slack credentials, set INTEGRATION_MODE=real, then rerun."
     exit 2
@@ -18,7 +22,7 @@ foreach ($key in @("JIRA_BASE_URL", "JIRA_EMAIL", "JIRA_API_TOKEN", "JIRA_PROJEC
 }
 docker compose up -d --build
 if ($LASTEXITCODE -ne 0) { throw "Compose start failed" }
-python chaos/run.py latency
+& $python chaos/run.py latency
 if ($LASTEXITCODE -ne 0) { throw "Live chaos scenario failed" }
-python scripts/live_result.py
+& $python scripts/live_result.py
 if ($LASTEXITCODE -ne 0) { throw "Live verification is incomplete" }

@@ -77,6 +77,21 @@ def test_firing_repeat_and_resolve_flow(monkeypatch):
     assert len(slack[0]["blocks"][1]["elements"]) == 3
 
 
+def test_mock_mode_uses_local_receivers_when_real_urls_are_configured(monkeypatch):
+    monkeypatch.setattr(router, "JIRA_MODE", "mock")
+    monkeypatch.setenv("JIRA_BASE_URL", "https://jira.example.invalid")
+    monkeypatch.setenv("SLACK_WEBHOOK_URL", "https://hooks.example.invalid")
+    monkeypatch.setattr(router, "_jira_base", "https://jira.example.invalid")
+    monkeypatch.setattr(router, "_slack_url", "https://hooks.example.invalid")
+    monkeypatch.setattr(router, "_jira_auth", ("operator@example.invalid", "fake-token"))
+
+    router.validate_configuration()
+
+    assert router._jira_base == "http://mock-jira:8080"
+    assert router._slack_url == "http://mock-slack:8080/webhook"
+    assert router._jira_auth is None
+
+
 def test_rate_limit_is_counted(monkeypatch):
     monkeypatch.setenv("JIRA_MAX_ISSUES_PER_HOUR", "0")
     monkeypatch.setattr(router, "_search_ticket", lambda fingerprint: None)
