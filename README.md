@@ -53,9 +53,9 @@ The production-style deployment is local. Set `GRAFANA_ADMIN_PASSWORD` and `ROUT
 | Alertmanager configuration and routing | Passed | `amtool check-config` and warning/critical route tests ran in the pinned Alertmanager image. |
 | End-to-end mock demo | Passed | Readiness, API request, cross-service trace, latency alert and mock ticket/message verified on 2026-10-27. |
 | Chaos: latency, errors, backend down and network delay | Passed | Real alert and mock integration results are recorded below. |
-| cAdvisor candidate metrics | Passed locally | Temporary cAdvisor v0.60.6 exposed named container CPU metrics on Docker Desktop with the existing mounts. |
+| cAdvisor container metrics | Passed locally | cAdvisor v0.60.6 exposed named container CPU and memory metrics on Docker Desktop with the existing mounts. |
 | Production-style deployment checks | Passed locally | HTTPS, TLS 1.3, redirect, headers, closed ports, blocked paths and Grafana authentication were checked on 2026-10-27. |
-| Container resource alerts | Not verified | The deployed cAdvisor version still needs the separate upgrade. Alert firing remains unverified until the chaos scenarios pass. |
+| Container resource alerts | Not verified | Named container CPU and memory metrics are available locally. Alert firing remains unverified until the chaos scenarios pass. |
 | Fresh clone | Not verified | A clean clone has not been tested. |
 | Live Slack and Jira | Not fully verified | Successful Jira requests and Slack HTTP 200 responses were logged, but a complete verification record is unavailable. |
 | CI workflows | Not verified | No workflow run exists. Production verification is configured for Linux CI. |
@@ -103,9 +103,9 @@ Capture files: [Slack alert](docs/images/slack-alert.png), [Jira ticket](docs/im
 | Latency | ApiHighLatency | Passed, alert 90.29 seconds after injection, ticket and message confirmed in 108.98 seconds. |
 | Errors | ApiHighErrorRate | Passed, alert 70.18 seconds after injection, ticket and message confirmed in 88.84 seconds. |
 | Backend killed | TargetDown | Passed, alert 80.39 seconds after injection, ticket and message confirmed in 80.45 seconds. |
-| CPU stress | ChaosContainerCpuHigh | Not verified. Candidate cAdvisor v0.60.6 returned named CPU metrics in an isolated test. |
-| Memory pressure | ChaosContainerMemoryHigh | Not verified. Candidate cAdvisor v0.60.6 returned named CPU metrics in an isolated test. |
-| Disk fill | ChaosContainerDiskHigh | Not verified. Candidate cAdvisor v0.60.6 returned named CPU metrics in an isolated test. |
+| CPU stress | ChaosContainerCpuHigh | Not verified. cAdvisor v0.60.6 returns named container metrics locally, but this alert has not been triggered successfully. |
+| Memory pressure | ChaosContainerMemoryHigh | Not verified. cAdvisor v0.60.6 returns named container metrics locally, but this alert has not been triggered successfully. |
+| Disk fill | ChaosContainerDiskHigh | Not verified. cAdvisor v0.60.6 returns named container metrics locally, but this alert has not been triggered successfully. |
 | Network delay | ApiHighLatency | Passed, alert 90.34 seconds after injection, ticket and message confirmed in 109.11 seconds. |
 
 Results from successful real runs are stored in [artifacts/chaos-results/](artifacts/chaos-results/). Capture steps and redaction guidance are in [docs/screenshots.md](docs/screenshots.md).
@@ -116,7 +116,7 @@ Silencing and the scheduled maintenance mute are documented in [docs/alerting.md
 
 The API chaos endpoint requires a token, the router checks an authorization header, images use fixed version tags and application containers run as a non-root user with a read-only root filesystem where supported. Credentials belong in ignored `.env` or GitHub secrets. This configuration is a demonstration and has not been independently reviewed.
 
-On Docker Desktop, node-exporter measures the Linux VM and not Windows. The configured cAdvisor v0.49.2 did not return per-container samples on this host. A temporary v0.60.6 test with the existing mounts returned named CPU metrics. Container resource alerts remain unverified. The local production-style deployment binds only to localhost. CI is configured to verify it on Linux. Local integration mocks are in-memory and reset when restarted. Chaos alerts need enough traffic and time to evaluate. Local demo tokens are not for shared environments.
+On Docker Desktop, node-exporter measures the Linux VM and not Windows. cAdvisor v0.60.6 returns named container CPU and memory metrics on this host with the existing mounts. Container resource alert firing remains unverified. The local production-style deployment binds only to localhost. CI is configured to verify it on Linux. Local integration mocks are in-memory and reset when restarted. Chaos alerts need enough traffic and time to evaluate. Local demo tokens are not for shared environments.
 
 See [local deployment](docs/deployment.md) and [troubleshooting](docs/troubleshooting.md) for deployment controls and cAdvisor diagnostics.
 

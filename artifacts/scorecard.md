@@ -15,14 +15,13 @@ Date: 2026-10-27
 | Production Compose configuration | Passed | `docker compose -f compose.prod.yml config --quiet` |
 | Local production deployment | Passed | 25 HTTPS, TLS, header, port, path and authentication checks on 2026-10-27 |
 | Docker storage driver | Confirmed | Docker reports `overlayfs` and `io.containerd.snapshotter.v1` on this host |
-| cAdvisor v0.49.2 metrics | Failed locally | Repeated layer-ID errors and no named per-container CPU samples |
-| cAdvisor v0.60.6 candidate | Passed locally | A temporary container with the existing mounts exposed named CPU samples for project containers |
+| cAdvisor v0.60.6 metrics | Passed locally | Production-stack cAdvisor exposed named CPU and memory samples for project containers with the existing mounts |
 | Local deployment verification | Passed | Results are recorded in `docs/deployment-verification.md` |
 | Linux CI deployment verification | Not verified | Workflow configured; no successful run is recorded |
 | Project tree secret scan | Passed | Nonignored project files had no findings |
 | Full workspace secret scan | Not passed | Five findings are in the ignored local `.env` and one generic-key pattern is in ignored generated Python dependency code |
-| Git history secret scan | Not passed | A historical environment example contains a credential finding; rotate it if real |
-| Git history text check | Not passed | Existing internal history refs fail the message check and were not rewritten |
+| Git history secret scan | Not passed across local refs | The current project branch scan passed. A historical environment example in a nonbranch local ref has a credential finding |
+| Git history text check | Passed for project branch | Current branch messages and author identities passed. Internal refs outside the branch were not rewritten |
 | Prometheus rules | Passed | Pinned image `promtool check rules` passed |
 | SLO alert rules | Passed | Pinned image `promtool test rules` passed |
 | Alertmanager config and routes | Passed | `amtool check-config` and warning/critical route tests passed |
@@ -32,7 +31,7 @@ Date: 2026-10-27
 | Error chaos | Passed | Alert at 70.18 seconds, ticket and message at 88.84 seconds |
 | Backend-down chaos | Passed | Alert at 80.39 seconds, ticket and message at 80.45 seconds |
 | Network-delay chaos | Passed | Alert at 90.34 seconds, ticket and message at 109.11 seconds |
-| Container resource alerts | Not verified | Dashboard metric availability is tested with a candidate image. Alert firing needs scenario results or a Linux CI run |
+| Container resource alerts | Not verified | Named container metrics are available locally. Alert firing needs scenario results or a Linux CI run |
 | Live Slack and Jira | Not verified | No populated `.env` is present |
 | Fresh clone check | Not verified | No commit exists yet |
 | CI workflow execution | Not verified | No workflow run exists |

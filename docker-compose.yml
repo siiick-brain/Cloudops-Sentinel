@@ -158,7 +158,7 @@ services:
     restart: unless-stopped
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.49.2
+    image: ghcr.io/google/cadvisor:0.60.6
     ports: ["8085:8080"]
     volumes:
       - /:/rootfs:ro

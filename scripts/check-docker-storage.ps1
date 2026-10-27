@@ -14,5 +14,5 @@ Write-Output "Docker storage driver: $driver"
 Write-Output "Docker driver status: $driverStatus"
 
 if ($driver.Trim() -eq "overlayfs") {
-    Write-Warning "The containerd image store is active. cAdvisor v0.49.2 cannot read container layer IDs with this store. Container resource metrics can be empty."
+    Write-Warning "The containerd image store is active. cAdvisor v0.60.6 adds containerd snapshotter support. Confirm named container metrics are present before relying on resource panels or alerts."
 }
