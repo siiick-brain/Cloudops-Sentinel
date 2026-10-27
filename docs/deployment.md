@@ -56,4 +56,4 @@ This is a single-host deployment with no high availability, no backups and no pu
 
 ## Roadmap
 
-- Planned: a cloud deployment.
+Local follow-up items are listed in [the project roadmap](roadmap.md).

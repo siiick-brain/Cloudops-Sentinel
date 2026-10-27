@@ -1,141 +1,199 @@
 # CloudOps Sentinel
-CloudOps Sentinel runs a monitored orders service with SLO alerting, tracing, chaos checks and local integration mocks.
+
+CloudOps Sentinel is a local operations demo for service metrics, SLO alerting, tracing and incident response.
+
+## Workflow status
+
+No workflow badges are shown because no workflow run is recorded.
+
+## Problem
+
+Service teams need a way to connect request health signals to operational actions. This project demonstrates how metrics, traces, SLO alerts and fault injection can support that work. Slack and Jira default to local mocks so the workflow can run without external accounts.
+
+## Architecture
 
 ```mermaid
 flowchart LR
+  Browser[Browser]
+  subgraph Host["Local host trust boundary"]
+    subgraph Published["Production localhost ports"]
+      Caddy["Caddy"]
+    end
+    subgraph Network["Docker Compose network"]
+      Loadgen["Load generator"]
+      API["Orders API"]
+      Proxy["Toxiproxy"]
+      Inventory["Inventory API"]
+      Prometheus["Prometheus"]
+      Alertmanager["Alertmanager"]
+      Grafana["Grafana"]
+      Node["Node exporter"]
+      CAdvisor["cAdvisor"]
+      DockerExporter["Docker exporter"]
+      Collector["OpenTelemetry Collector"]
+      Tempo["Tempo"]
+      Router["Alert router"]
+      Slack["Mock Slack or Slack webhook"]
+      Jira["Mock Jira or Jira Cloud"]
+      Chaos["Chaos tools"]
+    end
+    DockerLogs["Docker container logs"]
+  end
+
+  Browser -->|HTTPS in production Compose| Caddy
+  Caddy -->|Grafana only| Grafana
+  Browser -->|Development Compose ports| Grafana
   Loadgen --> API
-  API --> Toxiproxy --> Inventory
-  API --> Collector
-  Inventory --> Collector
-  Collector --> Tempo
-  API --> Prometheus
-  Inventory --> Prometheus
-  NodeExporter --> Prometheus
-  CAdvisor --> Prometheus
-  Prometheus --> Alertmanager
-  Alertmanager --> Router
-  Router --> SlackMock
-  Router --> JiraMock
+  API --> Proxy --> Inventory
+  API -->|OTLP traces| Collector
+  Inventory -->|OTLP traces| Collector
+  Collector -->|OTLP| Tempo
+  Prometheus -->|scrapes metrics| API
+  Prometheus -->|scrapes metrics| Inventory
+  Prometheus -->|scrapes metrics| Router
+  Prometheus -->|scrapes metrics| Slack
+  Prometheus -->|scrapes metrics| Jira
+  Prometheus -->|scrapes metrics| Grafana
+  Prometheus -->|scrapes metrics| Tempo
+  Prometheus -->|scrapes metrics| Collector
+  Prometheus -->|scrapes metrics| Node
+  Prometheus -->|scrapes metrics| CAdvisor
+  Prometheus -->|scrapes metrics| DockerExporter
+  Prometheus -->|self scrape| Prometheus
+  Prometheus -->|scrapes metrics| Alertmanager
   Grafana --> Prometheus
   Grafana --> Tempo
+  Prometheus -->|Firing and resolved alerts| Alertmanager
+  Alertmanager -->|Authenticated webhook| Router
+  Router --> Slack
+  Router --> Jira
+  API -.->|JSON stdout with trace ID| DockerLogs
+  Inventory -.->|JSON stdout with trace ID| DockerLogs
+  Router -.-> DockerLogs
+  Chaos -->|Fault injection| API
+  Chaos -->|CPU, memory and disk workload| CAdvisor
 ```
+
+In the production-style Compose configuration, only Caddy publishes host ports. The development Compose configuration publishes service ports for local testing.
 
 ## Quick start
 
-1. Install Docker Desktop or Docker Engine with Docker Compose.
-2. Copy `.env.example` to `.env` if you need to change local settings.
-3. Run `docker compose up`.
-4. Open Grafana at `http://localhost:3000` with `admin` and `sentinel-local`.
-5. Run `.\scripts\demo.ps1` in PowerShell or `sh scripts/demo.sh` in a POSIX shell.
+Run these commands from a clean clone in PowerShell. Docker Desktop or Docker Engine with Compose and Python are required.
 
-The local stack uses mock Slack and Jira services by default. `docker compose up` builds the service images and starts the platform.
+```powershell
+Copy-Item .env.example .env
+py -m venv .venv; .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo.ps1
+```
 
-The production-style deployment is local. Set `GRAFANA_ADMIN_PASSWORD` and `ROUTER_SHARED_TOKEN` in `.env`, set `INTEGRATION_MODE=mock` unless you intend to use real integrations then run `docker compose -f compose.prod.yml up -d --build`. Only Caddy publishes ports and it binds to localhost. CI is configured to verify the deployment end to end. No cloud deployment has been completed.
+Expected output: the demo reports API readiness, cross-service trace verification and a completed latency scenario, then prints the Compose service status. The stack uses mock Slack and Jira.
+
+## How it works
+
+### Metrics and dashboards as code
+
+The API and inventory services expose Prometheus request counters and latency histograms. Prometheus scrapes the application and infrastructure targets. Python code using the Grafana Foundation SDK generates provisioned dashboards for golden signals, SLOs, node and container health and traces.
+
+### SLOs and burn-rate alerts
+
+The API availability objective is 99.5 percent over 30 days. The latency objective is 95 percent of requests under 300 ms over 30 days. Recording rules track the rolling objectives and remaining budgets. Multi-window burn-rate rules alert on sustained budget consumption.
+
+### Alert routing to Slack and Jira
+
+Prometheus sends firing and resolved notifications to Alertmanager. Alertmanager groups alerts and sends authenticated webhooks to the router. The router deduplicates Jira tickets by fingerprint, sends Slack Block Kit messages and updates issues on repeat or resolution. CI and the default local configuration use mocks.
+
+Mock mode always directs traffic to the local mock receivers even when real integration URLs are present in `.env`.
+
+### Tracing
+
+The API calls the inventory service through Toxiproxy. Both services export OpenTelemetry spans to the collector and then to Tempo. Latency histogram exemplars link to traces in Grafana.
+
+### Chaos experiments
+
+The scenario runner injects API latency and errors, stops the backend or applies bounded CPU, memory, disk and network faults. It checks the expected alert and integrations, records elapsed times and returns a failing exit code when a required check fails.
 
 ## Results
 
-| Check | Status | Evidence |
-|---|---|---|
-| Unit tests and coverage | Passed | 19 tests and 83.67 percent coverage on 2026-10-27. |
-| Ruff | Passed | `ruff check .` on 2026-10-27. |
-| Mypy | Passed | `mypy` on 2026-10-27. |
-| YAML lint | Passed | `yamllint -c yamllint.yml .` on 2026-10-27. |
-| Style check | Passed | `scripts/check-style.ps1` ran on 2026-10-27. |
-| Public source text | Passed | No prohibited terms were found in project files on 2026-10-27. |
-| Dashboard and SLO generation | Passed | Generator drift tests ran as part of pytest. |
-| Compose configuration | Passed | `docker compose config --quiet` on 2026-10-27. |
-| Gitleaks project files | Passed | Nonignored project files had no findings on 2026-10-27. |
-| Gitleaks full workspace | Not passed | A generic-key pattern remains in ignored generated Python dependency code. |
-| Git history secret scan | Not passed | A historical environment example contains a credential finding. Rotate it if it was real. |
-| Git history text check | Not passed | Existing internal history refs fail the message check and were not rewritten. |
-| Docker Compose stack | Passed | All 14 services ran and configured health checks passed on 2026-10-27. |
-| Prometheus rules and SLO tests | Passed | `promtool check rules` and `promtool test rules` ran in the pinned Prometheus image. |
-| Alertmanager configuration and routing | Passed | `amtool check-config` and warning/critical route tests ran in the pinned Alertmanager image. |
-| End-to-end mock demo | Passed | Readiness, API request, cross-service trace, latency alert and mock ticket/message verified on 2026-10-27. |
-| Chaos: latency, errors, backend down and network delay | Passed | Real alert and mock integration results are recorded below. |
-| cAdvisor container metrics | Passed locally | cAdvisor v0.60.6 exposed named container CPU and memory metrics on Docker Desktop with the existing mounts. |
-| Production-style deployment checks | Passed locally | HTTPS, TLS 1.3, redirect, headers, closed ports, blocked paths and Grafana authentication were checked on 2026-10-27. |
-| Container resource alerts | Not verified | Named container CPU and memory metrics are available locally. Alert firing remains unverified until the chaos scenarios pass. |
-| Fresh clone | Not verified | A clean clone has not been tested. |
-| Live Slack and Jira | Not fully verified | Successful Jira requests and Slack HTTP 200 responses were logged, but a complete verification record is unavailable. |
-| CI workflows | Not verified | No workflow run exists. Production verification is configured for Linux CI. |
+Recorded local chaos runs are from 2026-10-27. The runner records alert time from fault injection and one shared polling time when Slack and Jira checks have both succeeded. It does not record separate Slack and Jira delivery times.
 
-CI is configured to use mock integrations. Live verification is incomplete because a complete verification record is unavailable. See [docs/live-verification.md](docs/live-verification.md). The project has no successful workflow run yet.
+| Scenario | Alert | Alert after injection | Slack and Jira confirmation after injection |
+|---|---|---:|---:|
+| Latency | ApiHighLatency | 85.26 seconds | 103.63 seconds, both confirmed |
+| Errors | ApiHighErrorRate | 70.18 seconds | 88.84 seconds, both confirmed |
+| Backend killed | TargetDown | 80.39 seconds | 80.45 seconds, both confirmed |
+| Network delay | ApiHighLatency | 90.34 seconds | 109.11 seconds, both confirmed |
+| CPU stress | ChaosContainerCpuHigh | Not observed | Not confirmed |
+| Memory pressure | ChaosContainerMemoryHigh | Not observed | Not confirmed |
+| Disk fill | ChaosContainerDiskHigh | Not observed | Not confirmed |
 
-## Integrations
+The test run on 2026-10-28 passed 20 tests with 83.92 percent coverage. The three resource alerts remain unverified. Local chaos result files are ignored and may contain account-specific result data.
 
-The local path is Alertmanager alert, alert-router webhook, Slack mock message and Jira mock issue. Resolution adds a comment, moves the Jira issue to Done and sends a resolved message. CI uses mocks. Live Slack and Jira need manual verification with Jira Cloud and a Slack incoming webhook.
+## Screenshots
 
-Real integration setup is in [docs/integrations.md](docs/integrations.md). Operational links: [SLO policy](docs/slo.md), [postmortem template](docs/incident-management/postmortem-template.md) and [on-call handover](docs/oncall/handover-template.md).
+No screenshots have been captured. Expected screenshots and capture steps are listed in [docs/screenshots.md](docs/screenshots.md). The demo GIF is also not present.
 
-Capture files: [Slack alert](docs/images/slack-alert.png), [Jira ticket](docs/images/jira-ticket.png) and [resolved Jira ticket](docs/images/jira-resolved.png). The Slack incoming webhook does not return a message timestamp. The live script reports this limitation rather than inventing a value.
+## Operations docs
 
-## SLO and alert reference
-
-| Objective | Target | Window |
-|---|---:|---|
-| API availability | 99.5 percent | 30 days |
-| API latency | 95 percent below 300 ms | 30 days |
-
-| Alert | Severity | Runbook |
-|---|---|---|
-| ApiAvailabilityBurnCritical | Critical | [Runbook](docs/runbooks/ApiAvailabilityBurnCritical.md) |
-| ApiAvailabilityBurnWarning | Warning | [Runbook](docs/runbooks/ApiAvailabilityBurnWarning.md) |
-| ApiLatencyBurnWarning | Warning | [Runbook](docs/runbooks/ApiLatencyBurnWarning.md) |
-| ApiHighErrorRate | Warning | [Runbook](docs/runbooks/ApiHighErrorRate.md) |
-| ApiHighLatency | Warning | [Runbook](docs/runbooks/ApiHighLatency.md) |
-| TargetDown | Critical | [Runbook](docs/runbooks/TargetDown.md) |
-| NodeDown | Critical | [Runbook](docs/runbooks/NodeDown.md) |
-| ChaosContainerCpuHigh | Warning | [Runbook](docs/runbooks/ChaosContainerCpuHigh.md) |
-| ChaosContainerMemoryHigh | Warning | [Runbook](docs/runbooks/ChaosContainerMemoryHigh.md) |
-| ChaosContainerDiskHigh | Warning | [Runbook](docs/runbooks/ChaosContainerDiskHigh.md) |
-| NodeCpuHigh | Warning | [Runbook](docs/runbooks/NodeCpuHigh.md) |
-| NodeMemoryHigh | Warning | [Runbook](docs/runbooks/NodeMemoryHigh.md) |
-| NodeDiskHigh | Warning | [Runbook](docs/runbooks/NodeDiskHigh.md) |
-| NodeDiskFillingSoon | Warning | [Runbook](docs/runbooks/NodeDiskFillingSoon.md) |
-| PrometheusDown | Critical | [Runbook](docs/runbooks/PrometheusDown.md) |
-| AlertmanagerDown | Critical | [Runbook](docs/runbooks/AlertmanagerDown.md) |
-
-## Chaos results
-
-| Scenario | Expected alert | Result |
-|---|---|---|
-| Latency | ApiHighLatency | Passed, alert 90.29 seconds after injection, ticket and message confirmed in 108.98 seconds. |
-| Errors | ApiHighErrorRate | Passed, alert 70.18 seconds after injection, ticket and message confirmed in 88.84 seconds. |
-| Backend killed | TargetDown | Passed, alert 80.39 seconds after injection, ticket and message confirmed in 80.45 seconds. |
-| CPU stress | ChaosContainerCpuHigh | Not verified. cAdvisor v0.60.6 returns named container metrics locally, but this alert has not been triggered successfully. |
-| Memory pressure | ChaosContainerMemoryHigh | Not verified. cAdvisor v0.60.6 returns named container metrics locally, but this alert has not been triggered successfully. |
-| Disk fill | ChaosContainerDiskHigh | Not verified. cAdvisor v0.60.6 returns named container metrics locally, but this alert has not been triggered successfully. |
-| Network delay | ApiHighLatency | Passed, alert 90.34 seconds after injection, ticket and message confirmed in 109.11 seconds. |
-
-Results from successful real runs are stored in [artifacts/chaos-results/](artifacts/chaos-results/). Capture steps and redaction guidance are in [docs/screenshots.md](docs/screenshots.md).
-
-Silencing and the scheduled maintenance mute are documented in [docs/alerting.md](docs/alerting.md).
-
-## Security controls and limits
-
-The API chaos endpoint requires a token, the router checks an authorization header, images use fixed version tags and application containers run as a non-root user with a read-only root filesystem where supported. Credentials belong in ignored `.env` or GitHub secrets. This configuration is a demonstration and has not been independently reviewed.
-
-On Docker Desktop, node-exporter measures the Linux VM and not Windows. cAdvisor v0.60.6 returns named container CPU and memory metrics on this host with the existing mounts. Container resource alert firing remains unverified. The local production-style deployment binds only to localhost. CI is configured to verify it on Linux. Local integration mocks are in-memory and reset when restarted. Chaos alerts need enough traffic and time to evaluate. Local demo tokens are not for shared environments.
-
-See [local deployment](docs/deployment.md) and [troubleshooting](docs/troubleshooting.md) for deployment controls and cAdvisor diagnostics.
+- [Runbooks](docs/runbooks/)
+- [SLO policy](docs/slo.md)
+- [Incident management](docs/incident-management/)
+- [On-call handover](docs/oncall/handover-template.md)
+- [Alerting and maintenance](docs/alerting.md)
+- [Local deployment](docs/deployment.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Documentation index](docs/README.md)
 
 ## Project layout
 
-| Path | Purpose |
-|---|---|
-| `app/` | Orders API, inventory service, alert router and mock receivers |
-| `compose.prod.yml` and `Caddyfile` | Local production-style deployment and Grafana-only proxy |
-| `monitoring/` | Prometheus rules, Alertmanager, Grafana, Tempo and collector configuration |
-| `chaos/` | Scenario specifications and runner |
-| `docs/` | SLO, integrations, runbooks, screenshots and incident operations |
-| `scripts/` | Demo, live verification and generation helpers |
-| `tests/` | Unit and configuration tests |
-| `artifacts/` | Measured chaos results and scorecard |
+- `app/`: API, inventory, alert router and mock receivers.
+- `monitoring/`: Prometheus rules, Grafana provisioning and dashboards.
+- `chaos/`: fault scenarios and their runner.
+- `scripts/`: setup, verification and dashboard tooling.
+- `docs/`: architecture, operations procedures and recorded evidence.
+- `tests/`: service, alerting and chaos-runner tests.
+
+## Design decisions
+
+- [Metrics and alerting stack](docs/adr/0001-metrics-and-alerting.md)
+- [Dashboards as code](docs/adr/0002-dashboards-as-code.md)
+- [Burn-rate SLO alerting](docs/adr/0003-burn-rate-slo-alerting.md)
+- [Mocks in CI and manual live verification](docs/adr/0004-mocks-and-live-integrations.md)
+
+## Testing and CI
+
+The workflow is configured to run pytest, Ruff, mypy, YAML lint, style checks, dashboard drift checks, Prometheus and Alertmanager validation, secret scans, image scans and a local end-to-end deployment check. No workflow run has been recorded.
+
+Run Python checks locally with:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest
+.\.venv\Scripts\python.exe -m ruff check .
+.\.venv\Scripts\python.exe -m mypy
+docker compose config --quiet
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-style.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-readme-images.ps1
+```
+
+After the Quick start command starts the stack, validate Prometheus and Alertmanager with:
+
+```powershell
+docker compose exec -T prometheus promtool check rules /etc/prometheus/rules/slo.yml /etc/prometheus/rules/platform.yml
+docker compose exec -T prometheus promtool test rules /etc/prometheus/rules/slo.test.yml
+docker compose exec -T alertmanager amtool check-config /etc/alertmanager/alertmanager.yml
+docker compose exec -T alertmanager amtool config routes test --config.file=/etc/alertmanager/alertmanager.yml --verify.receivers=sentinel-critical alertname=Smoke severity=critical service=api
+```
+
+The workflow also runs YAML lint, dashboard drift checks, secret scans, image scans and a production-style end-to-end check. See [the CI workflow](.github/workflows/ci.yml) for those invocations.
+
+## Security
+
+The production-style local deployment binds Caddy to localhost, disables anonymous Grafana access, requires a password from `.env`, blocks chaos and admin paths and leaves internal service ports unpublished. The API chaos control requires a token. Application services use read-only filesystems where configured. The project is a demonstration and has not been independently reviewed.
+
+CI uses mocks. Manual live Slack and Jira verification on 2026-10-27 was partial: successful Jira requests and Slack HTTP 200 responses were observed, but a complete end-to-end verification record is unavailable. See [docs/live-verification.md](docs/live-verification.md). On Docker Desktop, node-exporter measures the Linux VM rather than Windows. cAdvisor v0.60.6 returned named container CPU and memory samples on the recorded local host, but container resource alert firing remains unverified.
 
 ## Roadmap
 
-See [docs/roadmap.md](docs/roadmap.md) for work that remains planned or unverified.
+Planned items are listed in [docs/roadmap.md](docs/roadmap.md).
 
 ## License
 

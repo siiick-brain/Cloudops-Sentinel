@@ -6,6 +6,8 @@ The default stack routes Alertmanager notifications to the local alert-router. T
 
 The mocks are selected with `INTEGRATION_MODE=mock`. They expose local ports 8091 and 8092. The state is in memory and resets when a mock restarts.
 
+Mock mode forces the router to use the local receiver addresses even when `.env` contains real Jira or Slack endpoint values.
+
 ## Real Slack and Jira
 
 1. Copy `.env.example` to `.env`.
@@ -24,4 +26,3 @@ Do not paste tokens, webhook URLs or account data into source files or issue rep
 ## Payload behavior
 
 Slack messages include severity, summary, service and a value field with dashboard, runbook and ticket buttons. Jira issues include project, Task issue type, severity summary, description in Atlassian Document Format and labels for severity, service and fingerprint. Mocks test the local contract but do not certify the remote service schemas.
-

@@ -1,10 +1,10 @@
 # Exercise postmortem: injected API latency
 
-Status: Exercise completed on 2026-10-27 with local Slack and Jira mocks.
+Status: Exercise completed on 2026-10-27. The recorded run received successful Jira and Slack responses. Full live verification remains incomplete.
 
 ## Incident summary
 
-The latency chaos scenario injected 600 ms of API latency. Prometheus raised `ApiHighLatency`, Alertmanager delivered the firing notification and the router created Jira mock issue `MOCK-4` and sent Slack mock message timestamp `7`. The scenario cleared the injection after the integrations were confirmed. No external users or live integrations were involved.
+The latency chaos scenario injected 600 ms of API latency. Prometheus raised `ApiHighLatency` and Alertmanager delivered the firing notification. The router returned a Jira issue URL and Slack accepted the message. The issue URL and Slack message timestamp are not recorded here. The runner cleared the injection after the integration checks completed.
 
 ## Timeline
 
@@ -12,19 +12,19 @@ All event times are UTC.
 
 | Event | Measured time |
 |---|---|
-| Latency injection | 2026-10-27 18:19:09.780 |
-| `ApiHighLatency` alert observed | 2026-10-27 18:20:40.071, 90.29 seconds after injection |
-| Jira and Slack mock delivery confirmed | 2026-10-27 18:20:58.762, 108.98 seconds after injection |
-| Recovery completed | 2026-10-27 18:20:58.772 |
+| Latency injection | 2026-10-27 runner result |
+| `ApiHighLatency` alert observed | 85.26 seconds after injection |
+| Jira and Slack responses confirmed by the same runner poll | 103.63 seconds after injection |
+| Recovery completed | 2026-10-27 21:46:08 UTC |
 
 Evidence: [latency chaos result](../../artifacts/chaos-results/latency.json).
 
 ## Review
 
-The alert and both mock integrations were confirmed. Alert evaluation and routing took about 109 seconds from injection. This exercise does not measure customer impact or prove live Slack and Jira delivery.
+The alert and both integration checks passed. The runner recorded one shared confirmation time, not separate Slack and Jira delivery times. This exercise does not measure customer impact. The full manual live verification record remains incomplete.
 
 ## Follow-up actions
 
 | Action | Owner | Due date | Status |
 |---|---|---|---|
-| Verify alert and ticket timing with real integrations | Project operator | Before live verification | Not verified |
+| Complete a live verification record with separate integration timing where available | Project operator | Before claiming full live verification | Not verified |
