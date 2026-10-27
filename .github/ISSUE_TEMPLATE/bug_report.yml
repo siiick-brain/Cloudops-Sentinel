@@ -1,0 +1,19 @@
+name: Bug report
+description: Report a reproducible problem.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      description: Include expected behavior and a safe reproduction.
+    validations:
+      required: true
+  - type: textarea
+    id: checks
+    attributes:
+      label: Environment and checks
+      description: Include relevant versions and command results. Remove secrets.
+    validations:
+      required: true

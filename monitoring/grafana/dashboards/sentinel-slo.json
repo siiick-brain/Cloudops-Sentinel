@@ -1,0 +1,230 @@
+{
+  "annotations": {},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "panels": [
+    {
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ratio"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "options": null,
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "expr": "api:slo_availability:ratio30d",
+          "legendFormat": "{{service}}",
+          "refId": "A",
+          "exemplar": false
+        }
+      ],
+      "title": "Availability SLO, 30 days",
+      "transformations": [],
+      "transparent": false,
+      "type": "timeseries",
+      "id": 1,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ratio"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "options": null,
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "expr": "api:slo_latency:ratio30d",
+          "legendFormat": "{{service}}",
+          "refId": "A",
+          "exemplar": false
+        }
+      ],
+      "title": "Latency SLO, 30 days",
+      "transformations": [],
+      "transparent": false,
+      "type": "timeseries",
+      "id": 2,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ratio"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "options": null,
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "expr": "api:slo_error_budget:remaining_ratio",
+          "legendFormat": "{{service}}",
+          "refId": "A",
+          "exemplar": false
+        }
+      ],
+      "title": "Availability budget remaining",
+      "transformations": [],
+      "transparent": false,
+      "type": "timeseries",
+      "id": 3,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ratio"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "options": null,
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "expr": "api:slo_latency_error_budget:remaining_ratio",
+          "legendFormat": "{{service}}",
+          "refId": "A",
+          "exemplar": false
+        }
+      ],
+      "title": "Latency budget remaining",
+      "transformations": [],
+      "transparent": false,
+      "type": "timeseries",
+      "id": 4,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ratio"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "options": null,
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "expr": "api:slo_availability:ratio_rate5m",
+          "legendFormat": "{{service}}",
+          "refId": "A",
+          "exemplar": false
+        }
+      ],
+      "title": "Availability short-window trend",
+      "transformations": [],
+      "transparent": false,
+      "type": "timeseries",
+      "id": 5,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ratio"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "options": null,
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "expr": "api:slo_latency:ratio_rate5m",
+          "legendFormat": "{{service}}",
+          "refId": "A",
+          "exemplar": false
+        }
+      ],
+      "title": "Latency short-window trend",
+      "transformations": [],
+      "transparent": false,
+      "type": "timeseries",
+      "id": 6,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "operations",
+    "slo",
+    "traces"
+  ],
+  "templating": {},
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "SLO and error budget",
+  "uid": "sentinel-slo",
+  "id": null,
+  "version": 1,
+  "links": [
+    {
+      "title": "Tempo traces",
+      "url": "http://localhost:3000/explore?left=%7B%22datasource%22:%22tempo%22%7D"
+    }
+  ]
+}

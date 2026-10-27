@@ -1,0 +1,75 @@
+groups:
+- name: api-slo
+  interval: 30s
+  rules:
+  - record: api:slo_requests:rate5m
+    expr: sum(rate(http_requests_total{service="api"}[5m]))
+  - record: api:slo_errors:rate5m
+    expr: sum(rate(http_requests_total{service="api",status=~"5.."}[5m]))
+  - record: api:slo_availability:ratio_rate5m
+    expr: 1 - (api:slo_errors:rate5m / clamp_min(api:slo_requests:rate5m, 1e-9))
+  - record: api:slo_latency:ratio_rate5m
+    expr: sum(rate(http_request_duration_seconds_bucket{service="api",le="0.3"}[5m]))
+      / clamp_min(api:slo_requests:rate5m, 1e-9)
+  - record: api:slo_requests:increase30d
+    expr: sum(increase(http_requests_total{service="api"}[30d]))
+  - record: api:slo_errors:increase30d
+    expr: sum(increase(http_requests_total{service="api",status=~"5.."}[30d]))
+  - record: api:slo_availability:ratio30d
+    expr: 1 - (api:slo_errors:increase30d / clamp_min(api:slo_requests:increase30d,
+      1))
+  - record: api:slo_latency:ratio30d
+    expr: sum(increase(http_request_duration_seconds_bucket{service="api",le="0.3"}[30d]))
+      / clamp_min(api:slo_requests:increase30d, 1)
+  - record: api:slo_error_budget:remaining_ratio
+    expr: 1 - ((1 - api:slo_availability:ratio30d) / 0.005)
+  - record: api:slo_latency_error_budget:remaining_ratio
+    expr: 1 - ((1 - api:slo_latency:ratio30d) / 0.05)
+- name: api-slo-burn
+  interval: 30s
+  rules:
+  - alert: ApiAvailabilityBurnCritical
+    expr: (sum(rate(http_requests_total{service="api",status=~"5.."}[5m])) / clamp_min(sum(rate(http_requests_total{service="api"}[5m])),
+      1e-9) > 14.4 * 0.005) and (sum(rate(http_requests_total{service="api",status=~"5.."}[1h]))
+      / clamp_min(sum(rate(http_requests_total{service="api"}[1h])), 1e-9) > 14.4
+      * 0.005)
+    for: 2m
+    labels:
+      severity: critical
+      service: api
+    annotations:
+      summary: API availability is burning the error budget quickly
+      description: The multi-window burn rate exceeds 14.4 times the 30-day budget.
+      value: '{{ printf "%.2f" $value }}'
+      runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/ApiAvailabilityBurnCritical.md
+      dashboard_url: http://localhost:3000/d/sentinel-golden-signals
+  - alert: ApiAvailabilityBurnWarning
+    expr: (sum(rate(http_requests_total{service="api",status=~"5.."}[30m])) / clamp_min(sum(rate(http_requests_total{service="api"}[30m])),
+      1e-9) > 6 * 0.005) and (sum(rate(http_requests_total{service="api",status=~"5.."}[6h]))
+      / clamp_min(sum(rate(http_requests_total{service="api"}[6h])), 1e-9) > 6 * 0.005)
+    for: 5m
+    labels:
+      severity: warning
+      service: api
+    annotations:
+      summary: API availability is consuming the error budget
+      description: The multi-window burn rate exceeds 6 times the 30-day budget.
+      value: '{{ printf "%.2f" $value }}'
+      runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/ApiAvailabilityBurnWarning.md
+      dashboard_url: http://localhost:3000/d/sentinel-slo
+  - alert: ApiLatencyBurnWarning
+    expr: (1 - (sum(rate(http_request_duration_seconds_bucket{service="api",le="0.3"}[30m]))
+      / clamp_min(sum(rate(http_requests_total{service="api"}[30m])), 1e-9)) > 6 *
+      0.05) and (1 - (sum(rate(http_request_duration_seconds_bucket{service="api",le="0.3"}[6h]))
+      / clamp_min(sum(rate(http_requests_total{service="api"}[6h])), 1e-9)) > 6 *
+      0.05)
+    for: 5m
+    labels:
+      severity: warning
+      service: api
+    annotations:
+      summary: API latency is consuming the latency objective budget
+      description: Fewer than 95 percent of API requests are under 300 ms.
+      value: '{{ printf "%.2f" $value }}'
+      runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/ApiLatencyBurnWarning.md
+      dashboard_url: http://localhost:3000/d/sentinel-slo

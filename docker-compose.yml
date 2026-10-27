@@ -1,0 +1,318 @@
+name: cloudops-sentinel
+services:
+  api:
+    build: .
+    command: ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      INVENTORY_URL: http://toxiproxy:8666
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      CHAOS_TOKEN: ${CHAOS_TOKEN:-local-demo-token}
+    ports: ["8000:8000"]
+    depends_on:
+      backend: {condition: service_healthy}
+      toxiproxy: {condition: service_started}
+      otel-collector: {condition: service_started}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    read_only: true
+    tmpfs: ["/tmp"]
+    mem_limit: 256m
+    cpus: 0.5
+    restart: unless-stopped
+
+  backend:
+    build: .
+    command: ["uvicorn", "app.backend:app", "--host", "0.0.0.0", "--port", "8001"]
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports: ["8001:8001"]
+    depends_on:
+      otel-collector: {condition: service_started}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/readyz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    read_only: true
+    tmpfs: ["/tmp"]
+    mem_limit: 256m
+    cpus: 0.5
+    restart: unless-stopped
+
+  loadgen:
+    build: .
+    command: ["python", "scripts/loadgen.py"]
+    environment:
+      TARGET_URL: http://api:8000/orders/demo-sku
+    depends_on:
+      api: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://api:8000/readyz')"]
+      interval: 20s
+      timeout: 3s
+      retries: 3
+    read_only: true
+    tmpfs: ["/tmp"]
+    mem_limit: 128m
+    cpus: 0.25
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.3.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+      - --web.enable-lifecycle
+      - --web.enable-admin-api
+      - --enable-feature=exemplar-storage
+    ports: ["9090:9090"]
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    read_only: true
+    tmpfs: ["/tmp"]
+    depends_on:
+      api: {condition: service_healthy}
+      backend: {condition: service_healthy}
+      alert-router: {condition: service_healthy}
+      mock-jira: {condition: service_healthy}
+      mock-slack: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "/bin/prometheus", "--version"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+    mem_limit: 512m
+    cpus: 1
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        umask 077;
+        printf "%s" "$$ROUTER_SHARED_TOKEN" > /tmp/router_shared_token;
+        exec /bin/alertmanager
+        --config.file=/etc/alertmanager/alertmanager.yml
+        --storage.path=/tmp/alertmanager
+    ports: ["9093:9093"]
+    environment:
+      ROUTER_SHARED_TOKEN: ${ROUTER_SHARED_TOKEN:-local-demo-token}
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    read_only: true
+    tmpfs: ["/tmp", "/alertmanager"]
+    depends_on:
+      alert-router: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "/bin/alertmanager", "--version"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+    mem_limit: 128m
+    cpus: 0.25
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.6.1
+    ports: ["3000:3000"]
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-sentinel-local}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: http://localhost:3000
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus: {condition: service_started}
+      tempo: {condition: service_started}
+    healthcheck:
+      test: ["CMD", "grafana", "server", "-v"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+    user: "472:0"
+    read_only: true
+    tmpfs: ["/tmp", "/var/log/grafana"]
+    mem_limit: 512m
+    cpus: 1
+    restart: unless-stopped
+
+  node-exporter:
+    image: prom/node-exporter:v1.9.1
+    command: ["--path.rootfs=/host"]
+    ports: ["9100:9100"]
+    volumes:
+      - /:/host:ro
+    pid: host
+    read_only: true
+    mem_limit: 128m
+    cpus: 0.25
+    restart: unless-stopped
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.2
+    ports: ["8085:8080"]
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    privileged: true
+    read_only: true
+    tmpfs: ["/tmp"]
+    mem_limit: 256m
+    cpus: 0.5
+    restart: unless-stopped
+
+  docker-exporter:
+    image: ghcr.io/dlepaux/docker-exporter:latest
+    group_add: ["0"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    expose:
+      - "9713"
+    read_only: true
+    mem_limit: 64m
+    cpus: 0.25
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.126.0
+    command: ["--config=/etc/otel/config.yml"]
+    ports: ["4317:4317", "4318:4318"]
+    volumes:
+      - ./monitoring/otel-collector.yml:/etc/otel/config.yml:ro
+    depends_on:
+      tempo: {condition: service_started}
+    healthcheck:
+      test: ["CMD", "/otelcol-contrib", "validate", "--config=/etc/otel/config.yml"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+    read_only: true
+    tmpfs: ["/tmp"]
+    mem_limit: 256m
+    cpus: 0.5
+    restart: unless-stopped
+
+  tempo:
+    image: grafana/tempo:2.7.2
+    command: ["-config.file=/etc/tempo/tempo.yml"]
+    ports: ["3200:3200"]
+    volumes:
+      - ./monitoring/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo-data:/var/tempo
+    read_only: true
+    tmpfs: ["/tmp"]
+    healthcheck:
+      test: ["CMD", "/tempo", "-version"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+    mem_limit: 512m
+    cpus: 0.5
+    restart: unless-stopped
+
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.12.0
+    command: ["-host=0.0.0.0", "-config=/etc/toxiproxy/config.json"]
+    ports: ["8474:8474"]
+    volumes:
+      - ./monitoring/toxiproxy.json:/etc/toxiproxy/config.json:ro
+    read_only: true
+    tmpfs: ["/tmp"]
+    healthcheck:
+      test: ["CMD", "/toxiproxy", "-version"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+    mem_limit: 128m
+    cpus: 0.25
+    restart: unless-stopped
+
+  alert-router:
+    build: .
+    command: ["uvicorn", "app.alert_router:app", "--host", "0.0.0.0", "--port", "8090"]
+    environment:
+      INTEGRATION_MODE: ${INTEGRATION_MODE:-mock}
+      JIRA_BASE_URL: ${JIRA_BASE_URL:-http://mock-jira:8080}
+      JIRA_BROWSE_URL: ${JIRA_BROWSE_URL:-}
+      JIRA_EMAIL: ${JIRA_EMAIL:-}
+      JIRA_API_TOKEN: ${JIRA_API_TOKEN:-}
+      JIRA_PROJECT_KEY: ${JIRA_PROJECT_KEY:-MOCK}
+      JIRA_MAX_ISSUES_PER_HOUR: ${JIRA_MAX_ISSUES_PER_HOUR:-20}
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-http://mock-slack:8080/webhook}
+      ROUTER_SHARED_TOKEN: ${ROUTER_SHARED_TOKEN:-local-demo-token}
+      GRAFANA_URL: http://localhost:3000
+    ports: ["8090:8090"]
+    depends_on:
+      mock-jira: {condition: service_healthy}
+      mock-slack: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    read_only: true
+    tmpfs: ["/tmp"]
+    mem_limit: 256m
+    cpus: 0.5
+    restart: unless-stopped
+
+  mock-slack:
+    build: .
+    command: ["uvicorn", "app.mock_slack:app", "--host", "0.0.0.0", "--port", "8080"]
+    ports: ["8091:8080"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    read_only: true
+    tmpfs: ["/tmp"]
+    mem_limit: 128m
+    cpus: 0.25
+    restart: unless-stopped
+
+  mock-jira:
+    build: .
+    command: ["uvicorn", "app.mock_jira:app", "--host", "0.0.0.0", "--port", "8080"]
+    ports: ["8092:8080"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    read_only: true
+    tmpfs: ["/tmp"]
+    mem_limit: 128m
+    cpus: 0.25
+    restart: unless-stopped
+
+  chaos-tools:
+    build:
+      context: chaos
+    command: ["sleep", "infinity"]
+    profiles: ["chaos"]
+    healthcheck:
+      test: ["CMD", "stress-ng", "--version"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    tmpfs: ["/tmp"]
+    mem_limit: 256m
+    cpus: 0.5
+
+volumes:
+  prometheus-data:
+  grafana-data:
+  tempo-data:

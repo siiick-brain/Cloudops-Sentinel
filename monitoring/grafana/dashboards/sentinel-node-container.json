@@ -1,0 +1,98 @@
+{
+  "annotations": {},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "panels": [
+    {
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ratio"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "options": null,
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "expr": "1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))",
+          "legendFormat": "{{service}}",
+          "refId": "A",
+          "exemplar": false
+        }
+      ],
+      "title": "Node CPU",
+      "transformations": [],
+      "transparent": false,
+      "type": "timeseries",
+      "id": 1,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "options": null,
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "expr": "sum(container_memory_working_set_bytes) by (name)",
+          "legendFormat": "{{service}}",
+          "refId": "A",
+          "exemplar": false
+        }
+      ],
+      "title": "Container memory",
+      "transformations": [],
+      "transparent": false,
+      "type": "timeseries",
+      "id": 2,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "operations",
+    "slo",
+    "traces"
+  ],
+  "templating": {},
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "Node and container health",
+  "uid": "sentinel-node-container",
+  "id": null,
+  "version": 1,
+  "links": [
+    {
+      "title": "Tempo traces",
+      "url": "http://localhost:3000/explore?left=%7B%22datasource%22:%22tempo%22%7D"
+    }
+  ]
+}

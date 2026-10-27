@@ -1,0 +1,7 @@
+hypothesis: Stopping inventory causes a target-down alert.
+steady_state: API and inventory health checks pass.
+injection: Stop the backend service for 180 seconds.
+expected_alert: TargetDown
+abort_condition: The monitoring stack becomes unhealthy.
+recovery: Start the backend service and verify readiness.
+duration_seconds: 180

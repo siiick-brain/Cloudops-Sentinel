@@ -1,0 +1,27 @@
+http://localhost {
+	redir https://localhost{uri} permanent
+}
+
+https://localhost {
+	tls internal {
+		protocols tls1.3 tls1.3
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
+	request_body {
+		max_size 10MB
+	}
+
+	@blocked path /chaos /chaos/* /admin /admin/* /api/admin /api/admin/*
+	respond @blocked 404
+
+	reverse_proxy grafana:3000
+}

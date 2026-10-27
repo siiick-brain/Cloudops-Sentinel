@@ -1,0 +1,70 @@
+rule_files:
+  - slo.yml
+
+evaluation_interval: 1m
+
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'http_requests_total{service="api",status="200"}'
+        values: '0+100x360'
+      - series: 'http_requests_total{service="api",status="500"}'
+        values: '0+50x360'
+    alert_rule_test:
+      - eval_time: 1h3m
+        alertname: ApiAvailabilityBurnCritical
+        exp_alerts:
+          - exp_labels: {severity: critical, service: api}
+            exp_annotations:
+              summary: API availability is burning the error budget quickly
+              description: The multi-window burn rate exceeds 14.4 times the 30-day budget.
+              value: "0.33"
+              runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/ApiAvailabilityBurnCritical.md
+              dashboard_url: http://localhost:3000/d/sentinel-golden-signals
+  - interval: 1m
+    input_series:
+      - series: 'http_requests_total{service="api",status="200"}'
+        values: '0+100x360'
+      - series: 'http_requests_total{service="api",status="500"}'
+        values: '0+0x360'
+    alert_rule_test:
+      - eval_time: 7m
+        alertname: ApiAvailabilityBurnCritical
+        exp_alerts: []
+      - eval_time: 7m
+        alertname: ApiAvailabilityBurnWarning
+        exp_alerts: []
+      - eval_time: 7m
+        alertname: ApiLatencyBurnWarning
+        exp_alerts: []
+  - interval: 1m
+    input_series:
+      - series: 'http_requests_total{service="api",status="200"}'
+        values: '0+950x360'
+      - series: 'http_requests_total{service="api",status="500"}'
+        values: '0+50x360'
+      - series: 'http_request_duration_seconds_bucket{service="api",le="0.3"}'
+        values: '0+600x360'
+      - series: 'http_request_duration_seconds_bucket{service="api",le="+Inf"}'
+        values: '0+1000x360'
+    alert_rule_test:
+      - eval_time: 7m
+        alertname: ApiAvailabilityBurnWarning
+        exp_alerts:
+          - exp_labels: {severity: warning, service: api}
+            exp_annotations:
+              summary: API availability is consuming the error budget
+              description: The multi-window burn rate exceeds 6 times the 30-day budget.
+              value: "0.05"
+              runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/ApiAvailabilityBurnWarning.md
+              dashboard_url: http://localhost:3000/d/sentinel-slo
+      - eval_time: 7m
+        alertname: ApiLatencyBurnWarning
+        exp_alerts:
+          - exp_labels: {severity: warning, service: api}
+            exp_annotations:
+              summary: API latency is consuming the latency objective budget
+              description: Fewer than 95 percent of API requests are under 300 ms.
+              value: "0.40"
+              runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/ApiLatencyBurnWarning.md
+              dashboard_url: http://localhost:3000/d/sentinel-slo

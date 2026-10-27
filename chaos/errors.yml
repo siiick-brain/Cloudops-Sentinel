@@ -1,0 +1,7 @@
+hypothesis: API error injection causes the high error rate alert to fire.
+steady_state: API error rate remains below 5 percent.
+injection: Set the API error rate to 1 for 240 seconds.
+expected_alert: ApiHighErrorRate
+abort_condition: API health checks fail or the router stops responding.
+recovery: Clear API chaos settings and verify successful requests resume.
+duration_seconds: 240

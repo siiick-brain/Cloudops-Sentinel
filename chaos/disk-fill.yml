@@ -1,0 +1,7 @@
+hypothesis: A bounded file increases the chaos container filesystem use above its alert threshold.
+steady_state: Chaos container filesystem use remains below 50 MiB.
+injection: Write at most 64 MiB in the isolated chaos container root filesystem.
+expected_alert: ChaosContainerDiskHigh
+abort_condition: The chaos container reaches its memory limit or the host reports low disk.
+recovery: Remove the temporary file and verify disk use returns to baseline.
+duration_seconds: 180

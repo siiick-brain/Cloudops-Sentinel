@@ -1,0 +1,131 @@
+services:
+  api:
+    extends:
+      file: docker-compose.yml
+      service: api
+    ports: !reset []
+
+  backend:
+    extends:
+      file: docker-compose.yml
+      service: backend
+    ports: !reset []
+
+  loadgen:
+    extends:
+      file: docker-compose.yml
+      service: loadgen
+    ports: !reset []
+
+  prometheus:
+    extends:
+      file: docker-compose.yml
+      service: prometheus
+    ports: !reset []
+
+  alertmanager:
+    extends:
+      file: docker-compose.yml
+      service: alertmanager
+    ports: !reset []
+
+  grafana:
+    extends:
+      file: docker-compose.yml
+      service: grafana
+    ports: !reset []
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in .env}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_DOMAIN: localhost
+      GF_SERVER_ROOT_URL: https://localhost/
+
+  node-exporter:
+    extends:
+      file: docker-compose.yml
+      service: node-exporter
+    ports: !reset []
+
+  cadvisor:
+    extends:
+      file: docker-compose.yml
+      service: cadvisor
+    ports: !reset []
+
+  docker-exporter:
+    extends:
+      file: docker-compose.yml
+      service: docker-exporter
+    ports: !reset []
+
+  otel-collector:
+    extends:
+      file: docker-compose.yml
+      service: otel-collector
+    ports: !reset []
+
+  tempo:
+    extends:
+      file: docker-compose.yml
+      service: tempo
+    ports: !reset []
+
+  toxiproxy:
+    extends:
+      file: docker-compose.yml
+      service: toxiproxy
+    ports: !reset []
+
+  alert-router:
+    extends:
+      file: docker-compose.yml
+      service: alert-router
+    ports: !reset []
+    environment:
+      ROUTER_SHARED_TOKEN: ${ROUTER_SHARED_TOKEN:?Set ROUTER_SHARED_TOKEN in .env}
+      INTEGRATION_MODE: ${INTEGRATION_MODE:-mock}
+      GRAFANA_URL: https://localhost
+
+  mock-slack:
+    extends:
+      file: docker-compose.yml
+      service: mock-slack
+    ports: !reset []
+
+  mock-jira:
+    extends:
+      file: docker-compose.yml
+      service: mock-jira
+    ports: !reset []
+
+  chaos-tools:
+    extends:
+      file: docker-compose.yml
+      service: chaos-tools
+    ports: !reset []
+
+  caddy:
+    image: caddy:2.10.2-alpine
+    ports:
+      - "127.0.0.1:80:80"
+      - "127.0.0.1:443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      grafana:
+        condition: service_healthy
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.5
+
+networks:
+  default:
+volumes:
+  prometheus-data:
+  grafana-data:
+  tempo-data:
+  caddy-data:
+  caddy-config:

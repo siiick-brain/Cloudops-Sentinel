@@ -1,0 +1,19 @@
+name: Feature request
+description: Propose an in-scope change.
+title: "[Request] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: Need
+      description: Describe the operational need.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: List measurable results.
+    validations:
+      required: true

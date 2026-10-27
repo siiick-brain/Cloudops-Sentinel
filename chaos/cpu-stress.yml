@@ -1,0 +1,7 @@
+hypothesis: Sustained CPU load raises the chaos container CPU rate above its alert threshold.
+steady_state: Chaos container CPU use remains below half a CPU core.
+injection: Run two stress-ng CPU workers for 420 seconds in a container limited to half a CPU core.
+expected_alert: ChaosContainerCpuHigh
+abort_condition: Docker Desktop or the host becomes unresponsive.
+recovery: Stop stress-ng and verify CPU utilization recovers.
+duration_seconds: 420

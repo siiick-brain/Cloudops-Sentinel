@@ -1,0 +1,7 @@
+hypothesis: A toxiproxy latency toxic increases API response latency.
+steady_state: Inventory requests complete below 300 ms.
+injection: Add 700 ms of downstream latency for 240 seconds.
+expected_alert: ApiHighLatency
+abort_condition: API requests time out or health checks fail.
+recovery: Remove the toxiproxy toxic and verify inventory requests recover.
+duration_seconds: 240

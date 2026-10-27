@@ -1,0 +1,13 @@
+service: api
+objectives:
+  - name: availability
+    target: 99.5
+    window: 30d
+    good_event: Requests returning a non-5xx response.
+    total_event: Completed API requests.
+  - name: latency
+    target: 95
+    threshold_ms: 300
+    window: 30d
+    good_event: Requests completing under 300 ms.
+    total_event: Completed API requests.

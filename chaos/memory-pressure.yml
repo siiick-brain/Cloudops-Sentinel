@@ -1,0 +1,7 @@
+hypothesis: Memory pressure raises the chaos container working set above its alert threshold.
+steady_state: Chaos container working set remains below 80 MiB.
+injection: Allocate 128 MiB using stress-ng for 420 seconds in a container limited to 256 MiB.
+expected_alert: ChaosContainerMemoryHigh
+abort_condition: The host reports memory pressure or another service restarts.
+recovery: Stop stress-ng and verify memory returns to baseline.
+duration_seconds: 420

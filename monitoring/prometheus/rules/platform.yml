@@ -1,0 +1,123 @@
+groups:
+  - name: platform-alerts
+    rules:
+      - alert: ApiHighErrorRate
+        expr: sum(rate(http_requests_total{service="api",status=~"5.."}[5m])) / clamp_min(sum(rate(http_requests_total{service="api"}[5m])), 1e-9) > 0.05
+        for: 30s
+        labels: {severity: warning, service: api}
+        annotations:
+          summary: API error rate is above 5 percent
+          description: Check upstream health and recent deployments.
+          value: '{{ $value }}'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/ApiHighErrorRate.md
+      - alert: ApiHighLatency
+        expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{service="api"}[5m]))) > 0.3
+        for: 30s
+        labels: {severity: warning, service: api}
+        annotations:
+          summary: API p95 latency is above 300 ms
+          description: Inspect dependency latency and request volume.
+          value: '{{ $value }}'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/ApiHighLatency.md
+      - alert: TargetDown
+        expr: up == 0
+        for: 1m
+        labels: {severity: critical, service: monitoring}
+        annotations:
+          summary: A monitored target is down
+          description: Inspect the target health and its container logs.
+          value: '{{ $value }}'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/TargetDown.md
+      - alert: NodeDown
+        expr: up{job="node-exporter"} == 0
+        for: 1m
+        labels: {severity: critical, service: node}
+        annotations:
+          summary: Node exporter target is down
+          description: The monitored Linux node is not reporting metrics.
+          value: '{{ $value }}'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/NodeDown.md
+      - alert: ChaosContainerCpuHigh
+        expr: sum by (name) (rate(container_cpu_usage_seconds_total{name=~".*chaos-tools.*"}[1m])) > 0.4
+        for: 1m
+        labels: {severity: warning, service: container}
+        annotations:
+          summary: Chaos container CPU usage is high
+          description: The bounded CPU stress workload exceeded 0.4 CPU cores.
+          value: '{{ $value }}'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/ChaosContainerCpuHigh.md
+      - alert: ChaosContainerMemoryHigh
+        expr: container_memory_working_set_bytes{name=~".*chaos-tools.*"} > 83886080
+        for: 1m
+        labels: {severity: warning, service: container}
+        annotations:
+          summary: Chaos container memory use is high
+          description: The stress workload exceeded the 80 MiB alert threshold.
+          value: '{{ $value }}'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/ChaosContainerMemoryHigh.md
+      - alert: ChaosContainerDiskHigh
+        expr: container_fs_usage_bytes{name=~".*chaos-tools.*"} > 52428800
+        for: 1m
+        labels: {severity: warning, service: container}
+        annotations:
+          summary: Chaos container filesystem use is high
+          description: The bounded disk test exceeded the 50 MiB alert threshold.
+          value: '{{ $value }}'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/ChaosContainerDiskHigh.md
+      - alert: NodeCpuHigh
+        expr: 1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) > 0.9
+        for: 1m
+        labels: {severity: warning, service: node}
+        annotations:
+          summary: Node CPU utilization is above 90 percent
+          description: Find the processes consuming CPU and compare recent load.
+          value: '{{ $value }}'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/NodeCpuHigh.md
+      - alert: NodeMemoryHigh
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.9
+        for: 1m
+        labels: {severity: warning, service: node}
+        annotations:
+          summary: Node memory utilization is above 90 percent
+          description: Check memory pressure and container working sets.
+          value: '{{ $value }}'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/NodeMemoryHigh.md
+      - alert: NodeDiskHigh
+        expr: >-
+          (node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}
+          - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"})
+          / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"} > 0.85
+        for: 5m
+        labels: {severity: warning, service: node}
+        annotations:
+          summary: Node disk use is above 85 percent
+          description: Locate large files and review disk growth.
+          value: '{{ $value }}'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/NodeDiskHigh.md
+      - alert: NodeDiskFillingSoon
+        expr: predict_linear(node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"}[6h], 24 * 3600) < 0
+        for: 30m
+        labels: {severity: warning, service: node}
+        annotations:
+          summary: Node filesystem is predicted to fill within 24 hours
+          description: Review the observed growth rate and reclaim space.
+          value: '{{ $value }}'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/NodeDiskFillingSoon.md
+      - alert: PrometheusDown
+        expr: absent(up{job="prometheus"} == 1)
+        for: 1m
+        labels: {severity: critical, service: prometheus}
+        annotations:
+          summary: Prometheus target is unavailable
+          description: Check Prometheus health and storage.
+          value: '{{ $value }}'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/PrometheusDown.md
+      - alert: AlertmanagerDown
+        expr: absent(up{job="alertmanager"} == 1)
+        for: 1m
+        labels: {severity: critical, service: alertmanager}
+        annotations:
+          summary: Alertmanager target is unavailable
+          description: Check Alertmanager health and configuration.
+          value: '{{ $value }}'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/AlertmanagerDown.md
