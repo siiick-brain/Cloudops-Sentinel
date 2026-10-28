@@ -15,7 +15,7 @@ services:
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')"]
       interval: 10s
-      timeout: 3s
+      timeout: 10s
       retries: 5
     read_only: true
     tmpfs: ["/tmp"]
@@ -34,7 +34,7 @@ services:
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/readyz')"]
       interval: 10s
-      timeout: 3s
+      timeout: 10s
       retries: 5
     read_only: true
     tmpfs: ["/tmp"]
@@ -52,7 +52,7 @@ services:
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://api:8000/readyz')"]
       interval: 20s
-      timeout: 3s
+      timeout: 10s
       retries: 3
     read_only: true
     tmpfs: ["/tmp"]
@@ -260,7 +260,7 @@ services:
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/healthz')"]
       interval: 10s
-      timeout: 3s
+      timeout: 10s
       retries: 5
     read_only: true
     tmpfs: ["/tmp"]
@@ -275,7 +275,7 @@ services:
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz')"]
       interval: 10s
-      timeout: 3s
+      timeout: 10s
       retries: 5
     read_only: true
     tmpfs: ["/tmp"]
@@ -290,7 +290,7 @@ services:
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz')"]
       interval: 10s
-      timeout: 3s
+      timeout: 10s
       retries: 5
     read_only: true
     tmpfs: ["/tmp"]
