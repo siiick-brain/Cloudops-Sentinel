@@ -26,7 +26,7 @@ The manual Docker Desktop workaround is to turn off **Use containerd for pulling
 
 ## Recorded verification
 
-The recorded unit test run on 2026-10-28 passed 20 tests with 83.92 percent coverage. The local deployment check passed 25 checks on 2026-10-27. Four local mock-backed chaos scenarios recorded firing alerts and Slack and Jira confirmation. The CPU stress, memory pressure and disk fill runs failed to confirm their expected alerts.
+The recorded unit test run on 2026-10-28 passed 22 tests with 83.92 percent coverage. A fresh-checkout latency run on 2026-10-28 passed and recorded an alert after 75.27 seconds and shared Slack and Jira confirmation after 94.08 seconds. The local deployment check passed 25 checks on 2026-10-27. Four local mock-backed chaos scenarios recorded firing alerts and Slack and Jira confirmation. The CPU stress, memory pressure and disk fill runs failed to confirm their expected alerts.
 
 On 2026-10-27, a manual real integration exercise logged successful Jira requests and Slack HTTP 200 responses. The complete live end-to-end record is unavailable. The project does not treat the exercise as full live verification.
 
@@ -34,6 +34,8 @@ On 2026-10-27, a manual real integration exercise logged successful Jira request
 
 - The earlier cAdvisor image produced layer-ID errors with the Docker Desktop containerd image store. Version 0.60.6 exposed named metrics with the existing mounts.
 - The example environment file contained an external Jira URL while selecting mocks. Mock mode now forces local receiver addresses and the Jira mock supports the v3 search path used by the router. Regression tests cover both behaviors.
+- The clean-checkout demo first returned 401 because its local environment loader treated blank token entries as set values. The loader now ignores blank entries and a regression test covers both chaos and router token defaults.
+- Python service health checks repeatedly exceeded their 3-second timeout on Docker Desktop while the endpoints returned HTTP 200. The exact checks took 6.2 to 7.7 seconds when run directly. Python service healthcheck timeouts are now 10 seconds and a Compose regression test covers the configured values.
 - A first curl-based deployment check requested an unsupported curl output variable for the TLS version. The shell check now verifies the handshake by allowing TLS 1.3 only.
 - Local test commands must use the project virtual environment. The global pytest launcher was incompatible with its installed package, while the project environment passed the suite.
 - Full workspace secret scans include ignored local files. Report those findings separately from scans of committed source.

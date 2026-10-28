@@ -8,4 +8,4 @@ The latency exercise injected 600 ms of API latency. `ApiHighLatency` fired 85.2
 
 ## Handover
 
-The exercise is complete and no fault injection remains active. This was not a production incident. Before another live exercise, verify the integration configuration, confirm the maintenance window and assign an incident commander. See the [measured result](../../artifacts/chaos-results/latency.json) and [exercise postmortem](../incident-management/example-postmortem.md).
+The exercise is complete and no fault injection remains active. This was not a production incident. Before another live exercise, verify the integration configuration, confirm the maintenance window and assign an incident commander. See the [measured result](../../README.md#results) and [exercise postmortem](../incident-management/example-postmortem.md).

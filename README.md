@@ -114,19 +114,20 @@ The scenario runner injects API latency and errors, stops the backend or applies
 
 ## Results
 
-Recorded local chaos runs are from 2026-10-27. The runner records alert time from fault injection and one shared polling time when Slack and Jira checks have both succeeded. It does not record separate Slack and Jira delivery times.
+Recorded local chaos runs below are from 2026-10-27 and 2026-10-28. The 2026-10-28 latency run came from a fresh checkout. The runner records alert time from fault injection and one shared polling time when Slack and Jira checks have both succeeded. It does not record separate Slack and Jira delivery times.
 
-| Scenario | Alert | Alert after injection | Slack and Jira confirmation after injection |
+| Scenario and run date | Alert | Alert after injection | Slack and Jira confirmation after injection |
 |---|---|---:|---:|
-| Latency | ApiHighLatency | 85.26 seconds | 103.63 seconds, both confirmed |
-| Errors | ApiHighErrorRate | 70.18 seconds | 88.84 seconds, both confirmed |
-| Backend killed | TargetDown | 80.39 seconds | 80.45 seconds, both confirmed |
-| Network delay | ApiHighLatency | 90.34 seconds | 109.11 seconds, both confirmed |
-| CPU stress | ChaosContainerCpuHigh | Not observed | Not confirmed |
-| Memory pressure | ChaosContainerMemoryHigh | Not observed | Not confirmed |
-| Disk fill | ChaosContainerDiskHigh | Not observed | Not confirmed |
+| Latency, 2026-10-27 | ApiHighLatency | 85.26 seconds | 103.63 seconds, both confirmed |
+| Latency, 2026-10-28 fresh checkout | ApiHighLatency | 75.27 seconds | 94.08 seconds, both confirmed |
+| Errors, 2026-10-27 | ApiHighErrorRate | 70.18 seconds | 88.84 seconds, both confirmed |
+| Backend killed, 2026-10-27 | TargetDown | 80.39 seconds | 80.45 seconds, both confirmed |
+| Network delay, 2026-10-27 | ApiHighLatency | 90.34 seconds | 109.11 seconds, both confirmed |
+| CPU stress, 2026-10-27 | ChaosContainerCpuHigh | Not observed | Not confirmed |
+| Memory pressure, 2026-10-27 | ChaosContainerMemoryHigh | Not observed | Not confirmed |
+| Disk fill, 2026-10-27 | ChaosContainerDiskHigh | Not observed | Not confirmed |
 
-The test run on 2026-10-28 passed 20 tests with 83.92 percent coverage. The three resource alerts remain unverified. Local chaos result files are ignored and may contain account-specific result data.
+The test run on 2026-10-28 passed 22 tests with 83.92 percent coverage. The three resource alerts remain unverified. Local chaos result files are ignored and may contain account-specific result data.
 
 ## Screenshots
 
@@ -161,7 +162,7 @@ No screenshots have been captured. Expected screenshots and capture steps are li
 
 ## Testing and CI
 
-The workflow is configured to run pytest, Ruff, mypy, YAML lint, style checks, dashboard drift checks, Prometheus and Alertmanager validation, secret scans, image scans and a local end-to-end deployment check. No workflow run has been recorded.
+CI is configured to verify the local deployment end to end and run pytest, Ruff, mypy, YAML lint, style checks, dashboard drift checks, Prometheus and Alertmanager validation, secret scans and image scans. No workflow run has been recorded.
 
 Run Python checks locally with:
 
@@ -187,7 +188,7 @@ The workflow also runs YAML lint, dashboard drift checks, secret scans, image sc
 
 ## Security
 
-The production-style local deployment binds Caddy to localhost, disables anonymous Grafana access, requires a password from `.env`, blocks chaos and admin paths and leaves internal service ports unpublished. The API chaos control requires a token. Application services use read-only filesystems where configured. The project is a demonstration and has not been independently reviewed.
+The deployment is local. No cloud or public deployment has been done. The production-style local deployment binds Caddy to localhost, disables anonymous Grafana access, requires a password from `.env`, blocks chaos and admin paths and leaves internal service ports unpublished. The API chaos control requires a token. Application services use read-only filesystems where configured. The project is a demonstration and has not been independently reviewed.
 
 CI uses mocks. Manual live Slack and Jira verification on 2026-10-27 was partial: successful Jira requests and Slack HTTP 200 responses were observed, but a complete end-to-end verification record is unavailable. See [docs/live-verification.md](docs/live-verification.md). On Docker Desktop, node-exporter measures the Linux VM rather than Windows. cAdvisor v0.60.6 returned named container CPU and memory samples on the recorded local host, but container resource alert firing remains unverified.
 

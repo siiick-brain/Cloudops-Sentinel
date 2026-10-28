@@ -17,7 +17,7 @@ All event times are UTC.
 | Jira and Slack responses confirmed by the same runner poll | 103.63 seconds after injection |
 | Recovery completed | 2026-10-27 21:46:08 UTC |
 
-Evidence: [latency chaos result](../../artifacts/chaos-results/latency.json).
+Evidence: [recorded results in the README](../../README.md#results).
 
 ## Review
 
