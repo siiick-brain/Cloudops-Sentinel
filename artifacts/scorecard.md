@@ -14,6 +14,7 @@ Date: 2026-10-28
 | Compose configuration | Passed | Development and production-style Compose configuration checks ran on 2026-10-28 |
 | Prometheus and Alertmanager rules | Passed | `promtool` and `amtool` checks ran from the fresh checkout on 2026-10-28 |
 | Local deployment verification | Passed | 25 checks on 2026-10-27; results are in `docs/deployment-verification.md` |
+| Existing production-style stack | Not verified | The production-style loadgen container remained unhealthy during this task. It was left unchanged |
 | Docker storage driver | Confirmed | `docker info` returned `overlayfs` and `io.containerd.snapshotter.v1` on 2026-10-28 |
 | cAdvisor container metrics | Passed locally | Version 0.60.6 returned named API CPU and memory samples with the existing mounts |
 | CPU, memory and disk alert scenarios | Not verified | Recorded scenarios failed to confirm their expected alerts |
