@@ -3,6 +3,7 @@
 See the [capture guide](../screenshots.md) for privacy requirements and setup.
 Run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-all.ps1` to refresh captures.
 Statuses reflect files present in this checkout. Terminal captures are rendered from captured command output.
+The original selected dashboard and deployment screenshots are preserved by the capture scripts when those files already exist.
 
 | File | Status | Created by | Recapture when | Caption |
 |---|---|---|---|---|
@@ -27,7 +28,7 @@ Statuses reflect files present in this checkout. Terminal captures are rendered 
 | `jira-ticket.png` | Missing | `scripts/capture-all.ps1` | After a mock or live issue is created | Jira alert ticket |
 | `prometheus-alert-rules.png` | Present | `scripts/capture-all.ps1` | When alert rules change | Prometheus alerts page |
 | `prometheus-container-cpu-metrics.png` | Present | `scripts/capture-all.ps1` | When cAdvisor metrics are available | Prometheus container CPU metrics page |
-| `prometheus-cpu-alert-firing.png` | Present | `scripts/capture-all.ps1` | When the CPU alert is firing | Prometheus CPU alert page |
+| `prometheus-cpu-alert-firing.png` | Present | `scripts/capture-all.ps1` | When a disk alert is firing | Prometheus NodeDiskHigh alert page |
 | `prometheus-targets-up.png` | Present | `scripts/capture-all.ps1` | After service health changes | Prometheus targets page |
 | `pytest-results.png` | Present | `scripts/capture-all.ps1` | After test changes | rendered from captured command output |
 | `slack-alert.png` | Missing | `scripts/capture-all.ps1` | After an alert reaches the configured channel | Slack firing alert |

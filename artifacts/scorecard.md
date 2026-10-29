@@ -1,30 +1,28 @@
 # Verification scorecard
 
-Date: 2026-10-28
+Date: 2026-10-29
 
-| Area | Status | Evidence or blocker |
+| Area | Status | Evidence |
 |---|---|---|
-| Unit tests | Passed | 22 tests and 83.92 percent coverage on 2026-10-28 |
-| Ruff | Passed | `ruff check .` ran on 2026-10-28 |
-| Mypy | Passed | `mypy` ran on 2026-10-28 |
-| YAML lint | Passed with warning | Repository lint returned success on 2026-10-28. It reported one blank-line warning in `monitoring/prometheus/prometheus.yml` |
-| Style check | Passed | `scripts/check-style.ps1` ran on 2026-10-28 |
-| README image links | Passed | `scripts/check-readme-images.ps1` passed with no broken links. A temporary missing-image link correctly made it fail |
-| Relative documentation links | Passed | Relative links resolved in 45 Markdown files on 2026-10-28 |
-| Compose configuration | Passed | Development and production-style Compose configuration checks ran on 2026-10-28 |
-| Prometheus and Alertmanager rules | Passed | `promtool` and `amtool` checks ran from the fresh checkout on 2026-10-28 |
-| Local deployment verification | Passed | 25 checks on 2026-10-27; results are in `docs/deployment-verification.md` |
-| Existing production-style stack | Not verified | The production-style loadgen container remained unhealthy during this task. It was left unchanged |
-| Docker storage driver | Confirmed | `docker info` returned `overlayfs` and `io.containerd.snapshotter.v1` on 2026-10-28 |
-| cAdvisor container metrics | Passed locally | Version 0.60.6 returned named API CPU and memory samples with the existing mounts |
-| CPU, memory and disk alert scenarios | Not verified | Recorded scenarios failed to confirm their expected alerts |
-| Latency, error, backend-down and network-delay scenarios | Passed in recorded runs | 2026-10-27 results are summarized in README. Local result files are ignored |
-| Live Slack and Jira | Partially verified | Successful Jira requests and Slack HTTP 200 responses on 2026-10-27. Complete end-to-end live evidence is unavailable |
-| Workflow execution | Not verified | CI is configured. No workflow run is recorded |
-| Fresh clone README verification | Passed | Outside-OneDrive checkout passed Compose validation, 22 tests, Ruff, mypy, Prometheus and Alertmanager checks and `scripts/demo.ps1` on 2026-10-28 |
-| Current branch secret scan | Passed | Gitleaks scanned current branch history on 2026-10-28 and found no leaks |
-| Full workspace secret scan | Not passed | The 2026-10-28 scan found six patterns in ignored local `.env` and generated Python environment files. Values were redacted |
-| All local refs secret scan | Not passed | The 2026-10-28 scan found one historical Atlassian token pattern in `.env.example` at commit `a0ef1450ee663785ecb472335147c6eb361b6667`. Do not rewrite history |
-| All local refs text check | Not passed | Older local-only commit subjects contain prohibited session labels. The current branch commit subjects are clean. Do not rewrite history |
-| Image captures | Planned | No screenshot files or demo GIF are present |
-| Publish readiness | Not verified | Review the private publish checklist before publishing |
+| Unit tests | Passed | `pytest -q`: 26 tests passed with 83.92 percent coverage on 2026-10-29 |
+| Ruff | Passed | `ruff check .` passed on 2026-10-29 |
+| Mypy | Passed | `mypy` passed on 2026-10-29 |
+| Style check | Passed | `scripts/check-style.ps1` passed on 2026-10-29 |
+| README image links | Passed | `scripts/check-readme-images.ps1` passed on 2026-10-29 |
+| Compose configuration | Passed | Development and production-style `docker compose config --quiet` checks passed on 2026-10-29 |
+| Prometheus and Alertmanager rules | Passed | `promtool check rules` found 13 rules in each file. Rule tests, Alertmanager config and the critical route check passed on 2026-10-29 |
+| Fresh-clone verification | Pending | The current documentation and screenshot changes have not yet been checked from a fresh clone |
+| Demo script | Blocked | The 2026-10-29 run stopped before the demo or chaos check because port 8090 was already allocated. A fresh-checkout demo passed on 2026-10-28 |
+| Local deployment verification | Passed in recorded run | 25 checks on 2026-10-27; results are in `docs/deployment-verification.md` |
+| Docker storage driver | Confirmed in recorded run | `overlayfs` and `io.containerd.snapshotter.v1` were reported on 2026-10-28 |
+| cAdvisor container metrics | Passed in recorded run | Version 0.60.6 returned named API CPU and memory samples with the existing mounts |
+| Chaos scenarios | Mixed | Recorded results are listed in the README. Latency and disk-fill runs on 2026-10-29 did not confirm their expected alerts |
+| Live Slack and Jira | Partially verified | The manual exercise on 2026-10-27 recorded successful Jira requests and Slack HTTP 200 responses. Complete end-to-end live evidence is unavailable |
+| Workflow execution | Not verified | The workflow is configured. No workflow run is recorded |
+| Selected screenshots | Present | The README links the nine selected original screenshots. Every present PNG is under 500 KB |
+| Automated recapture | Not run | The selected original screenshots were kept intact. The demo could not start because port 8090 was already allocated |
+| Demo GIF | Missing | No GIF is present in `docs/images/` |
+| Working-tree secret scan | Findings | Gitleaks reported eight redacted matches in ignored `.env` and `.venv` files. Keep those local files out of commits |
+| Git history secret scan | No findings reported | `gitleaks git --log-opts="--all"` returned no findings and reported 20 commits scanned. A separate redacted Gitleaks scan of the `git log --all --full-history -p` stream scanned about 1.27 MB and found no leaks across the 68 reachable commits |
+| Author and message audit | Reviewed | All 68 reachable commits use the configured author identity. No `Co-authored-by` trailers were found. Older session-labeled subjects remain in history |
+| Publish readiness | Not verified | See the private publish checklist for scan details and remaining commands |

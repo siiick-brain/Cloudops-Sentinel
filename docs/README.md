@@ -12,9 +12,12 @@
 
 - [SLO policy](slo.md)
 - [Alerting and maintenance](alerting.md)
+- [Alert delivery flow](alerting-flow.md)
 - [Integrations](integrations.md)
 - [Runbooks](runbooks/)
-- [Incident management](incident-management/)
+- [Incident management lifecycle](incident-management/lifecycle.md)
+- [Incident management procedures](incident-management/)
+- [On-call handover example](oncall/example-handover.md)
 - [On-call procedures](oncall/)
 
 ## Evidence and project details
@@ -27,6 +30,7 @@
 - [Image file status](images/README.md)
 - [Repository description and topics](repo-metadata.md)
 - [Planned work](roadmap.md)
+- [Scorecard](../artifacts/scorecard.md)
 
 ## Architecture decisions
 

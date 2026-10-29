@@ -22,11 +22,11 @@ The recorded Docker host reported the `overlayfs` driver and the `io.containerd.
 
 The image pin was upgraded to cAdvisor v0.60.6 without changing its mounts. An isolated run and the local production-style stack returned named CPU and memory metrics for the API container. The Docker storage check still reports `overlayfs` and asks the operator to confirm metrics before relying on resource alerts. The CPU, memory and disk alert scenarios remain unverified.
 
-The manual Docker Desktop workaround is to turn off **Use containerd for pulling and storing images**. On Docker Engine, set `features.containerd-snapshotter` to `false` in the daemon configuration. Do not change cAdvisor mounts based only on the warning.
+The manual Docker Desktop workaround is to turn off **Use containerd for pulling and storing images**. On Docker Engine, set `features.containerd-snapshotter` to `false` in the daemon configuration. Do not change cAdvisor mounts based only on the warning. The CPU and memory chaos alert runs later passed with the existing mounts, while the disk alert remains unconfirmed.
 
 ## Recorded verification
 
-The recorded unit test run on 2026-10-28 passed 22 tests with 83.92 percent coverage. A fresh-checkout latency run on 2026-10-28 passed and recorded an alert after 75.27 seconds and shared Slack and Jira confirmation after 94.08 seconds. The local deployment check passed 25 checks on 2026-10-27. Four local mock-backed chaos scenarios recorded firing alerts and Slack and Jira confirmation. The CPU stress, memory pressure and disk fill runs failed to confirm their expected alerts.
+The local unit test run on 2026-10-29 passed 26 tests with 83.92 percent coverage. The fresh-checkout unit test run on 2026-10-28 passed 22 tests with the same coverage. A fresh-checkout latency run on 2026-10-28 passed and recorded an alert after 75.27 seconds and shared Slack and Jira confirmation after 94.08 seconds. The local deployment check passed 25 checks on 2026-10-27. Recorded mock-backed runs for latency, errors, backend-down, network delay, CPU stress and memory pressure confirmed their expected alerts and both integration checks. The disk-fill run failed to confirm its expected alert. A later latency run on 2026-10-29 also failed to confirm its expected alert.
 
 On 2026-10-27, a manual real integration exercise logged successful Jira requests and Slack HTTP 200 responses. The complete live end-to-end record is unavailable. The project does not treat the exercise as full live verification.
 
