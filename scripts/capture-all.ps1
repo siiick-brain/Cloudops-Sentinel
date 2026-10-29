@@ -62,6 +62,11 @@ function Invoke-TerminalCapture {
     $output = Join-Path "docs\images" $Image
     $renderOutput = & $python "scripts\terminal_shot.py" --output $output --command $Command --timeout $Timeout 2>&1
     $exitCode = $LASTEXITCODE
+    $skipLine = $renderOutput | Where-Object { [string]$_ -like "Skipped:*" } | Select-Object -First 1
+    if ($exitCode -eq 0 -and $null -ne $skipLine) {
+        Write-CaptureResult $Image "Skipped" ([string]$skipLine -replace '^Skipped:\s*', '')
+        return
+    }
     if ($exitCode -eq 0 -and (Test-Path -LiteralPath (Join-Path $root $output))) {
         $commandExitCode = $null
         foreach ($line in $renderOutput) {

@@ -123,6 +123,9 @@ def main() -> int:
     if result.status == "Failed":
         print(result.reason, file=sys.stderr)
         return 2
+    if result.status == "Skipped":
+        print(f"Skipped: {result.reason}")
+        return 0
     print(
         f"Rendered captured output to {destination.relative_to(ROOT)} "
         f"with command exit code {exit_code}."

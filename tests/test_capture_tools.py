@@ -1,3 +1,6 @@
+from PIL import Image
+
+from scripts import capture_support
 from scripts.terminal_shot import captured_lines, wrap_exact
 
 
@@ -24,3 +27,19 @@ def test_terminal_capture_includes_command_streams_exit_code_and_timestamp() -> 
     assert "standard error" in rows
     assert "Exit code: 2" in rows
     assert rows[-1] == "Captured at 2026-10-29T12:00:00+00:00"
+
+
+def test_capture_does_not_replace_selected_dashboard_image(tmp_path, monkeypatch) -> None:
+    original = b"selected screenshot"
+    destination = tmp_path / "grafana-golden-signals.png"
+    destination.write_bytes(original)
+    monkeypatch.setattr(capture_support, "IMAGE_DIR", tmp_path)
+
+    result = capture_support.save_png(
+        Image.new("RGB", (10, 10), "white"),
+        destination.name,
+        {},
+    )
+
+    assert result.status == "Skipped"
+    assert destination.read_bytes() == original

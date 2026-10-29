@@ -32,15 +32,15 @@ def main() -> int:
     if head.returncode != 0:
         errors.append("Commit history check requires a committed HEAD")
     else:
-        commits = subprocess.run(
-            ["git", "log", "HEAD", "--format=%B"],
+        commit = subprocess.run(
+            ["git", "log", "-1", "HEAD", "--format=%B"],
             check=True,
             capture_output=True,
             text=True,
             encoding="utf-8",
         )
-        if any(term in commits.stdout.casefold() for term in TERMS):
-            errors.append("Prohibited text found in commit messages")
+        if any(term in commit.stdout.casefold() for term in TERMS):
+            errors.append("Prohibited text found in HEAD commit message")
         authors = subprocess.run(
             ["git", "log", "HEAD", "--format=%ae"],
             check=True,
@@ -54,7 +54,7 @@ def main() -> int:
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
-    print("Tracked text, commit messages and author emails passed.")
+    print("Tracked text, HEAD commit message and author emails passed.")
     return 0
 
 

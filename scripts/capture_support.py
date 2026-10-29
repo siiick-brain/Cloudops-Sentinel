@@ -13,6 +13,19 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 IMAGE_DIR = ROOT / "docs" / "images"
 MAX_PNG_BYTES = 500 * 1024
+PRESERVED_SCREENSHOTS = frozenset(
+    {
+        "P2-16-deployment-verification.png",
+        "grafana-distributed-traces.png",
+        "grafana-golden-signals.png",
+        "grafana-node-container-health.png",
+        "grafana-slo-error-budget.png",
+        "prometheus-alert-rules.png",
+        "prometheus-container-cpu-metrics.png",
+        "prometheus-cpu-alert-firing.png",
+        "prometheus-targets-up.png",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -50,6 +63,12 @@ def image_path(name: str) -> Path:
 def save_png(image: Image.Image, name: str, env: dict[str, str]) -> CaptureResult:
     IMAGE_DIR.mkdir(parents=True, exist_ok=True)
     destination = image_path(name)
+    if name in PRESERVED_SCREENSHOTS and destination.is_file():
+        return CaptureResult(
+            name,
+            "Skipped",
+            "Preserved the selected existing screenshot instead of replacing it",
+        )
     image.save(destination, format="PNG", optimize=True)
     if destination.stat().st_size > MAX_PNG_BYTES:
         image.convert("P", palette=Image.Palette.ADAPTIVE, colors=256).save(
