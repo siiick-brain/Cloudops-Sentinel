@@ -3,7 +3,6 @@
 See the [capture guide](../screenshots.md) for privacy requirements and setup.
 Run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-all.ps1` to refresh captures.
 Statuses reflect files present in this checkout. Terminal captures are rendered from captured command output.
-The original selected dashboard and deployment screenshots are preserved by the capture scripts when those files already exist.
 
 | File | Status | Created by | Recapture when | Caption |
 |---|---|---|---|---|

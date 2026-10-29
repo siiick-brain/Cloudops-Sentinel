@@ -26,7 +26,7 @@ The manual Docker Desktop workaround is to turn off **Use containerd for pulling
 
 ## Recorded verification
 
-The local unit test run on 2026-10-29 passed 26 tests with 83.92 percent coverage. The fresh-checkout unit test run on 2026-10-28 passed 22 tests with the same coverage. A fresh-checkout latency run on 2026-10-28 passed and recorded an alert after 75.27 seconds and shared Slack and Jira confirmation after 94.08 seconds. The local deployment check passed 25 checks on 2026-10-27. Recorded mock-backed runs for latency, errors, backend-down, network delay, CPU stress and memory pressure confirmed their expected alerts and both integration checks. The disk-fill run failed to confirm its expected alert. A later latency run on 2026-10-29 also failed to confirm its expected alert.
+The latest local unit test run on 2026-10-29 passed 25 tests with 83.92 percent coverage. The fresh-checkout unit test run on 2026-10-28 passed 22 tests with the same coverage. A fresh-checkout latency run on 2026-10-28 passed and recorded an alert after 75.27 seconds and shared Slack and Jira confirmation after 94.08 seconds. The local deployment check passed 25 checks on 2026-10-27. Recorded mock-backed runs for latency, errors, backend-down, network delay, CPU stress and memory pressure confirmed their expected alerts and both integration checks. The disk-fill run failed to confirm its expected alert. A later latency run on 2026-10-29 also failed to confirm its expected alert.
 
 On 2026-10-27, a manual real integration exercise logged successful Jira requests and Slack HTTP 200 responses. The complete live end-to-end record is unavailable. The project does not treat the exercise as full live verification.
 

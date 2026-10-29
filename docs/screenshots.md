@@ -1,6 +1,6 @@
 # Screenshot guide
 
-The README gallery uses the selected original screenshots in `docs/images/`. The capture command preserves those files when they already exist, so a rerun cannot replace the gallery with an empty dashboard.
+The README gallery uses the selected original screenshots in `docs/images/`. Automated captures can replace files with matching names. Before rerunning capture-all, move the selected screenshots to ignored `private/` storage and review new captures before copying any into the gallery.
 
 Run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-all.ps1` from the repository root while the development Compose stack is running. The browser viewport is 1440 by 900, the browser theme is dark and dashboard time ranges use the preceding hour. The script starts a short latency scenario while it captures the monitoring pages. Each image is reported as Captured, Skipped or Failed with a reason.
 
@@ -16,7 +16,7 @@ Use `scripts/capture-all.ps1` as the single automated capture command. It runs t
 | `scripts/record_demo.py` | SLO dashboard video converted to `demo.gif` |
 | `scripts/terminal_shot.py` | PNGs rendered from real command output |
 
-`scripts/capture_support.py` shares image validation and saving between the modules. It preserves the nine selected README screenshots when those files already exist. Run `scripts/save_login.py` separately when the Slack or Jira browser session needs to be created or renewed.
+`scripts/capture_support.py` shares image validation and saving between the modules. Run `scripts/save_login.py` separately when the Slack or Jira browser session needs to be created or renewed.
 
 `scripts/screenshot-prep.ps1` is a separate manual preparation flow and is not called by `capture-all.ps1`. It takes the development Compose stack down before starting the production-style stack.
 

@@ -128,7 +128,7 @@ The table uses recorded local runs. The runner records alert time from injection
 | Memory pressure, 2026-10-29 | ChaosContainerMemoryHigh | 241.79 seconds | Shared poll at 266.44 seconds | Shared poll at 266.44 seconds |
 | Disk fill, 2026-10-27 | ChaosContainerDiskHigh | Not observed | Not recorded | Not recorded |
 
-The 2026-10-29 latency and disk-fill runs failed to confirm their expected alerts. The local test run on 2026-10-29 passed 26 tests with 83.92 percent coverage. A fresh-checkout test run on 2026-10-28 passed 22 tests with the same coverage. Current checks are recorded in [the scorecard](artifacts/scorecard.md).
+The 2026-10-29 latency and disk-fill runs failed to confirm their expected alerts. The latest local test run on 2026-10-29 passed 25 tests with 83.92 percent coverage. A fresh-checkout test run on 2026-10-28 passed 22 tests with the same coverage. Current checks are recorded in [the scorecard](artifacts/scorecard.md).
 
 ## Screenshots
 

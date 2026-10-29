@@ -4,14 +4,14 @@ Date: 2026-10-29
 
 | Area | Status | Evidence |
 |---|---|---|
-| Unit tests | Passed | `pytest -q`: 26 tests passed with 83.92 percent coverage on 2026-10-29 |
+| Unit tests | Passed | `pytest -q`: 25 tests passed with 83.92 percent coverage on 2026-10-29 |
 | Ruff | Passed | `ruff check .` passed on 2026-10-29 |
 | Mypy | Passed | `mypy` passed on 2026-10-29 |
 | Style check | Passed | `scripts/check-style.ps1` passed on 2026-10-29 |
 | README image links | Passed | `scripts/check-readme-images.ps1` passed on 2026-10-29 |
 | Compose configuration | Passed | Development and production-style `docker compose config --quiet` checks passed on 2026-10-29 |
 | Prometheus and Alertmanager rules | Passed | `promtool check rules` found 13 rules in each file. Rule tests, Alertmanager config and the critical route check passed on 2026-10-29 |
-| Fresh-clone verification | Pending | The current documentation and screenshot changes have not yet been checked from a fresh clone |
+| Fresh-clone verification | Not current | The fresh clone was checked before the final documentation adjustments. The exact final commit was not cloned |
 | Demo script | Blocked | The 2026-10-29 run stopped before the demo or chaos check because port 8090 was already allocated. A fresh-checkout demo passed on 2026-10-28 |
 | Local deployment verification | Passed in recorded run | 25 checks on 2026-10-27; results are in `docs/deployment-verification.md` |
 | Docker storage driver | Confirmed in recorded run | `overlayfs` and `io.containerd.snapshotter.v1` were reported on 2026-10-28 |
@@ -20,7 +20,7 @@ Date: 2026-10-29
 | Live Slack and Jira | Partially verified | The manual exercise on 2026-10-27 recorded successful Jira requests and Slack HTTP 200 responses. Complete end-to-end live evidence is unavailable |
 | Workflow execution | Not verified | The workflow is configured. No workflow run is recorded |
 | Selected screenshots | Present | The README links the nine selected original screenshots. Every present PNG is under 500 KB |
-| Automated recapture | Not run | The selected original screenshots were kept intact. The demo could not start because port 8090 was already allocated |
+| Automated recapture | Not run | The selected original screenshots remain in the gallery. The demo could not start because port 8090 was already allocated |
 | Demo GIF | Missing | No GIF is present in `docs/images/` |
 | Working-tree secret scan | Findings | Gitleaks reported eight redacted matches in ignored `.env` and `.venv` files. Keep those local files out of commits |
 | Git history secret scan | No findings reported | `gitleaks git --log-opts="--all"` returned no findings and reported 20 commits scanned. A separate redacted Gitleaks scan of the `git log --all --full-history -p` stream scanned about 1.27 MB and found no leaks across the 68 reachable commits |
