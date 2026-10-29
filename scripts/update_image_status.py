@@ -132,8 +132,8 @@ IMAGES: list[tuple[str, str, str, str]] = [
     (
         "prometheus-cpu-alert-firing.png",
         "scripts/capture-all.ps1",
-        "When a disk alert is firing",
-        "Prometheus NodeDiskHigh alert page",
+        "When the CPU alert is firing",
+        "Prometheus CPU alert page",
     ),
     (
         "prometheus-targets-up.png",
@@ -181,10 +181,6 @@ def main() -> None:
         (
             "Statuses reflect files present in this checkout. Terminal captures are rendered "
             "from captured command output."
-        ),
-        (
-            "The original selected dashboard and deployment screenshots are preserved by "
-            "the capture scripts when those files already exist."
         ),
         "",
         "| File | Status | Created by | Recapture when | Caption |",
