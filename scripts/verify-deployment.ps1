@@ -1,3 +1,7 @@
+param(
+    [string]$OutputPath
+)
+
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
@@ -76,7 +80,14 @@ $lines = @(
 foreach ($check in $checks) {
     $lines += "| $($check.Name) | $($check.Status) | $($check.Detail) |"
 }
-Set-Content -LiteralPath (Join-Path $root "docs\deployment-verification.md") -Value $lines -Encoding utf8
+$outputFile = if ([string]::IsNullOrWhiteSpace($OutputPath)) {
+    Join-Path $root "docs\deployment-verification.md"
+} elseif ([System.IO.Path]::IsPathRooted($OutputPath)) {
+    $OutputPath
+} else {
+    Join-Path $root $OutputPath
+}
+Set-Content -LiteralPath $outputFile -Value $lines -Encoding utf8
 
 foreach ($check in $checks) {
     Write-Output ("{0}: {1} ({2})" -f $check.Name, $check.Status, $check.Detail)

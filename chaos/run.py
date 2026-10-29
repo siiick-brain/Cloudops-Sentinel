@@ -204,9 +204,14 @@ def wait_for_integrations(
     return checks, routed
 
 
-def run(scenario: str) -> dict[str, Any]:
+def run(scenario: str, duration_override: int | None = None) -> dict[str, Any]:
     source = ROOT / "chaos" / f"{scenario}.yml"
     specification = yaml.safe_load(source.read_text(encoding="utf-8"))
+    duration = int(specification["duration_seconds"])
+    if duration_override is not None:
+        if duration_override <= 0:
+            raise ValueError("Duration override must be a positive number of seconds")
+        duration = min(duration, duration_override)
     started_at = datetime.now(UTC)
     start = time.monotonic()
     expected = specification["expected_alert"]
@@ -217,10 +222,10 @@ def run(scenario: str) -> dict[str, Any]:
         "status": "failed",
     }
     try:
-        inject(scenario, int(specification["duration_seconds"]))
+        inject(scenario, duration)
         injection_time = time.monotonic()
         result["injection_seconds"] = injection_time - start
-        fired_at = wait_for_alert(expected, int(specification["duration_seconds"]))
+        fired_at = wait_for_alert(expected, duration)
         result["alert_seconds"] = fired_at - injection_time
         checks, routed = wait_for_integrations(expected, 90)
         result["integration_checks"] = checks
@@ -254,9 +259,17 @@ def main() -> None:
             "network-delay",
         ],
     )
+    parser.add_argument(
+        "--duration-seconds",
+        type=int,
+        help=(
+            "Cap the scenario alert wait and stress duration without changing "
+            "its configured default"
+        ),
+    )
     args = parser.parse_args()
     try:
-        result = run(args.scenario)
+        result = run(args.scenario, args.duration_seconds)
     except Exception as exc:
         print(f"Chaos scenario {args.scenario} failed: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc

@@ -131,7 +131,17 @@ The test run on 2026-10-28 passed 22 tests with 83.92 percent coverage. The thre
 
 ## Screenshots
 
-No screenshots have been captured. Expected screenshots and capture steps are listed in [docs/screenshots.md](docs/screenshots.md). The demo GIF is also not present.
+Run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-all.ps1` to refresh screenshots while the local stack is running. Captures that need a firing alert, live session or public repository are skipped when the required evidence is unavailable.
+
+![Grafana dashboard showing trace rates for the API and inventory services](docs/images/grafana-distributed-traces.png)
+
+![Grafana node and container health panels](docs/images/grafana-node-container-health.png)
+
+![Prometheus targets page showing scrape status](docs/images/prometheus-targets-up.png)
+
+![Prometheus alert rules and active alert state](docs/images/prometheus-alert-rules.png)
+
+The [screenshot guide](docs/screenshots.md) explains how to prepare private Slack and Jira sessions. The [image status list](docs/images/README.md) records each expected image, its capture command and recapture guidance.
 
 ## Operations docs
 

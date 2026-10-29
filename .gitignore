@@ -2,6 +2,7 @@
 .env.*
 !.env.example
 caddy-local-root.crt
+private/auth/
 private/
 .[a]gents/
 .[c]laude/
