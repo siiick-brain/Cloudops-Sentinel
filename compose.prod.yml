@@ -53,12 +53,6 @@ services:
       service: cadvisor
     ports: !reset []
 
-  docker-exporter:
-    extends:
-      file: docker-compose.yml
-      service: docker-exporter
-    ports: !reset []
-
   otel-collector:
     extends:
       file: docker-compose.yml
@@ -124,6 +118,7 @@ services:
 networks:
   default:
 volumes:
+  node-textfile:
   prometheus-data:
   grafana-data:
   tempo-data:

@@ -1,0 +1,66 @@
+rule_files:
+  - platform.yml
+
+evaluation_interval: 30s
+
+tests:
+  # A writable filesystem at 90 percent fires; a read-only one at 100 percent stays quiet.
+  - interval: 30s
+    input_series:
+      - series: 'node_filesystem_size_bytes{instance="n",fstype="ext4",mountpoint="/data"}'
+        values: '100x20'
+      - series: 'node_filesystem_avail_bytes{instance="n",fstype="ext4",mountpoint="/data"}'
+        values: '10x20'
+      - series: 'node_filesystem_readonly{instance="n",fstype="ext4",mountpoint="/data"}'
+        values: '0x20'
+      - series: 'node_filesystem_size_bytes{instance="n",fstype="ext4",mountpoint="/headers"}'
+        values: '100x20'
+      - series: 'node_filesystem_avail_bytes{instance="n",fstype="ext4",mountpoint="/headers"}'
+        values: '0x20'
+      - series: 'node_filesystem_readonly{instance="n",fstype="ext4",mountpoint="/headers"}'
+        values: '1x20'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: NodeDiskHigh
+        exp_alerts: []
+      - eval_time: 6m
+        alertname: NodeDiskHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              service: node
+              instance: n
+              fstype: ext4
+              mountpoint: /data
+            exp_annotations:
+              summary: Node disk use is above 85 percent
+              description: Locate large files and review disk growth.
+              value: "90%"
+              runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/master/docs/runbooks/NodeDiskHigh.md
+              dashboard_url: http://localhost:3000/d/sentinel-node-container
+
+  # The disk-fill scenario: 60 of 64 MiB used fires after 30 s; 10 MiB used stays quiet.
+  - interval: 15s
+    input_series:
+      - series: 'chaos_scratch_size_bytes{instance="node-exporter:9100",job="node-exporter"}'
+        values: '67108864x10'
+      - series: 'chaos_scratch_avail_bytes{instance="node-exporter:9100",job="node-exporter"}'
+        values: '56623104x3 4194304x6'
+    alert_rule_test:
+      - eval_time: 45s
+        alertname: ChaosContainerDiskHigh
+        exp_alerts: []
+      - eval_time: 2m
+        alertname: ChaosContainerDiskHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              service: container
+              instance: node-exporter:9100
+              job: node-exporter
+            exp_annotations:
+              summary: Chaos container filesystem is over 80 percent full
+              description: The bounded disk-fill test filled the 64 MiB scratch filesystem past 80 percent.
+              value: "93.75%"
+              runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/master/docs/runbooks/ChaosContainerDiskHigh.md
+              dashboard_url: http://localhost:3000/d/sentinel-node-container

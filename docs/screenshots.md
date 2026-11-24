@@ -24,14 +24,14 @@ Use `scripts/capture-all.ps1` as the single automated capture command. It runs t
 
 | File | What it shows | Retake |
 |---|---|---|
-| `grafana-golden-signals.png` | API request rate and p95 latency. The selected capture has no error-rate data. | Confirm the dashboard panels have data before capturing. Move the existing file into ignored `private/` storage before running the capture command. |
+| `grafana-golden-signals.png` | Request rate, error rate and p95 latency during injected latency and errors. | Confirm the dashboard panels have data before capturing. Move the existing file into ignored `private/` storage before running the capture command. |
 | `grafana-distributed-traces.png` | API and inventory trace rates over time. | Confirm both services are sending spans before capturing. |
-| `grafana-node-container-health.png` | Node CPU and container memory metrics. | Confirm cAdvisor returns named container metrics before capturing. |
-| `grafana-slo-error-budget.png` | Latency objective and remaining budget. The availability panel has no data in the selected capture. | Confirm the desired SLO panels have data before capturing. |
+| `grafana-node-container-health.png` | Node CPU and per-container memory and CPU for this stack. | Confirm cAdvisor returns named container metrics before capturing. |
+| `grafana-slo-error-budget.png` | Availability and latency objectives with their remaining budgets. | Confirm the desired SLO panels have data before capturing. |
 | `prometheus-targets-up.png` | Prometheus target health. | Confirm targets are in the intended state before capturing. |
-| `prometheus-container-cpu-metrics.png` | Container CPU usage over time. | Confirm cAdvisor samples have a container name before capturing. |
+| `prometheus-container-cpu-metrics.png` | CPU usage per stack container, filtered to `cloudops-sentinel*`. | Confirm cAdvisor samples have a container name before capturing. |
 | `prometheus-alert-rules.png` | Platform alert rules and states. | Run a scenario only when a firing alert is needed. |
-| `prometheus-cpu-alert-firing.png` | Prometheus alert details. The selected capture shows NodeDiskHigh, not a CPU alert. | Capture only after confirming the alert name and details in the page. |
+| `prometheus-cpu-alert-firing.png` | Prometheus alerts page with `ApiHighErrorRate` and `ApiHighLatency` firing. | Capture only after confirming the alert name and details in the page. |
 | `P2-16-deployment-verification.png` | Original Compose startup output. | Run deployment verification and inspect the output before replacing the selected image. |
 
 Move an existing selected image to ignored `private/` storage before retaking it. The capture script writes to the original filename only when that file is absent. Review the new image before moving it into the README gallery.

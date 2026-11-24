@@ -54,7 +54,7 @@
       "repeatDirection": "h",
       "targets": [
         {
-          "expr": "sum(container_memory_working_set_bytes) by (name)",
+          "expr": "sum by (name) (container_memory_working_set_bytes{name=~\"cloudops-sentinel.*\"})",
           "legendFormat": "{{service}}",
           "refId": "A",
           "exemplar": false
@@ -65,6 +65,39 @@
       "transparent": false,
       "type": "timeseries",
       "id": 2,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cores"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "options": null,
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "expr": "sum by (name) (rate(container_cpu_usage_seconds_total{name=~\"cloudops-sentinel.*\"}[1m]))",
+          "legendFormat": "{{service}}",
+          "refId": "A",
+          "exemplar": false
+        }
+      ],
+      "title": "Container CPU",
+      "transformations": [],
+      "transparent": false,
+      "type": "timeseries",
+      "id": 3,
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"

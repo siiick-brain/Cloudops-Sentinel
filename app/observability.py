@@ -10,7 +10,8 @@ from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExport
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from prometheus_client import Counter, Histogram
+from prometheus_client import REGISTRY, Counter, Histogram
+from prometheus_client.exposition import choose_encoder
 
 REQUESTS = Counter(
     "http_requests_total",
@@ -59,19 +60,24 @@ def configure_tracing(service_name: str) -> None:
 
 def instrument(app: FastAPI, service: str) -> None:
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-    from prometheus_client import make_asgi_app
 
     configure_logging()
     configure_tracing(service)
     FastAPIInstrumentor.instrument_app(app)
-    app.mount("/metrics", make_asgi_app())
+
+    # A route rather than a mounted app: newer Starlette redirects /metrics to
+    # /metrics/. The Accept header picks OpenMetrics, which carries exemplars.
+    @app.get("/metrics", include_in_schema=False)
+    def metrics(request: Request) -> Response:
+        encoder, content_type = choose_encoder(request.headers.get("accept", ""))
+        return Response(encoder(REGISTRY), headers={"Content-Type": content_type})
 
     @app.middleware("http")
     async def record_metrics(
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
-        if request.url.path == "/metrics":
+        if request.url.path.rstrip("/") == "/metrics":
             return await call_next(request)
         start = time.perf_counter()
         response = await call_next(request)

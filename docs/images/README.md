@@ -15,7 +15,7 @@ Statuses reflect files present in this checkout. Terminal captures are rendered 
 | `demo-run.png` | Present | `scripts/capture-all.ps1` | After demo changes | rendered from captured command output |
 | `gitleaks-history.png` | Present | `scripts/capture-all.ps1` | Before publishing | rendered from captured command output |
 | `grafana-distributed-traces.png` | Present | `scripts/capture-all.ps1` | After tracing changes | Grafana distributed traces dashboard |
-| `grafana-exemplar.png` | Missing | `scripts/capture-all.ps1` | When Prometheus has exemplars | Grafana Explore exemplar view |
+| `grafana-exemplar.png` | Present | `scripts/capture-all.ps1` | When Prometheus has exemplars | Grafana Explore exemplar view |
 | `grafana-golden-signals.png` | Present | `scripts/capture-all.ps1` | After generating traffic | Grafana golden signals dashboard |
 | `grafana-node-container-health.png` | Present | `scripts/capture-all.ps1` | When metrics are available | Grafana node and container health dashboard |
 | `grafana-slo-error-budget.png` | Present | `scripts/capture-all.ps1` | After a measured SLO exercise | Grafana SLO dashboard |
@@ -24,7 +24,6 @@ Statuses reflect files present in this checkout. Terminal captures are rendered 
 | `github-repo.png` | Missing | `scripts/capture-all.ps1` | After public repository changes | GitHub repository page |
 | `github-runbook.png` | Missing | `scripts/capture-all.ps1` | After runbook changes | GitHub rendered runbook |
 | `jira-resolved.png` | Missing | `scripts/capture-all.ps1` | After a Jira issue is Done | Jira issue in Done state |
-| `jira-ticket.png` | Missing | `scripts/capture-all.ps1` | After a mock or live issue is created | Jira alert ticket |
 | `prometheus-alert-rules.png` | Present | `scripts/capture-all.ps1` | When alert rules change | Prometheus alerts page |
 | `prometheus-container-cpu-metrics.png` | Present | `scripts/capture-all.ps1` | When cAdvisor metrics are available | Prometheus container CPU metrics page |
 | `prometheus-cpu-alert-firing.png` | Present | `scripts/capture-all.ps1` | When a disk alert is firing | Prometheus NodeDiskHigh alert page |
@@ -33,3 +32,5 @@ Statuses reflect files present in this checkout. Terminal captures are rendered 
 | `slack-alert.png` | Missing | `scripts/capture-all.ps1` | After an alert reaches the configured channel | Slack firing alert |
 | `slack-resolved.png` | Missing | `scripts/capture-all.ps1` | After the alert resolves | Slack resolved alert |
 | `tempo-trace.png` | Present | `scripts/capture-all.ps1` | After trace data is available | Grafana view of a trace found through the Tempo API |
+| `slack-alert-resolved.png` | Present | Manual capture of the live run | After a live run | Slack firing and resolved messages |
+| `jira-ticket.png` | Present | Manual capture of the live run, commenter name blurred | After a live run | Jira issue with resolution comment |

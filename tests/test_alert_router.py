@@ -9,7 +9,7 @@ from app import alert_router as router
 def isolate_router(monkeypatch):
     monkeypatch.setattr(router, "JIRA_MODE", "mock")
     monkeypatch.setattr(router, "_ticket_by_fingerprint", {})
-    monkeypatch.setattr(router, "_transitions", {})
+    monkeypatch.setattr(router, "_done_transition_id", None)
     monkeypatch.setattr(router, "_created_at", router.deque())
     monkeypatch.setenv("JIRA_PROJECT_KEY", "MOCK")
     monkeypatch.setenv("ROUTER_SHARED_TOKEN", "local-demo-token")
@@ -95,16 +95,18 @@ def test_mock_mode_uses_local_receivers_when_real_urls_are_configured(monkeypatc
 def test_rate_limit_is_counted(monkeypatch):
     monkeypatch.setenv("JIRA_MAX_ISSUES_PER_HOUR", "0")
     monkeypatch.setattr(router, "_search_ticket", lambda fingerprint: None)
+    slack = []
+    monkeypatch.setattr(router, "_post_slack", lambda payload: slack.append(payload) or None)
     before = router.REJECTED_TICKETS._value.get()
-    with pytest.raises(router.HTTPException) as error:
-        router.process_alert(
-            {
-                "fingerprint": "limited",
-                "labels": {"alertname": "RateLimit", "service": "api"},
-                "annotations": {},
-            }
-        )
-    assert error.value.status_code == 429
+    result = router.process_alert(
+        {
+            "fingerprint": "limited",
+            "labels": {"alertname": "RateLimit", "service": "api"},
+            "annotations": {},
+        }
+    )
+    assert result["issue_key"] == ""
+    assert len(slack) == 1, "Slack is still notified when ticket creation is capped"
     assert router.REJECTED_TICKETS._value.get() == before + 1
 
 

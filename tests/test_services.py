@@ -107,3 +107,20 @@ def test_mock_slack_webhook_and_message_list():
     client = TestClient(mock_slack.app)
     assert client.post("/webhook", json={"text": "test"}).json()["ok"] is True
     assert client.get("/messages").json()["messages"] == [{"text": "test"}]
+
+
+def test_metrics_endpoint_serves_without_redirect_and_is_not_counted():
+    from fastapi.testclient import TestClient
+
+    from app.api import app
+
+    client = TestClient(app)
+    plain = client.get("/metrics", follow_redirects=False)
+    assert plain.status_code == 200
+    assert "http_requests_total" in plain.text
+    assert 'route="/metrics' not in plain.text
+
+    open_metrics = client.get(
+        "/metrics", headers={"Accept": "application/openmetrics-text; version=1.0.0"}
+    )
+    assert open_metrics.headers["content-type"].startswith("application/openmetrics-text")

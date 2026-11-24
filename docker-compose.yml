@@ -147,18 +147,31 @@ services:
 
   node-exporter:
     image: prom/node-exporter:v1.9.1
-    command: ["--path.rootfs=/host"]
+    command: ["--path.rootfs=/host", "--collector.textfile.directory=/textfile"]
     ports: ["9100:9100"]
     volumes:
       - /:/host:ro
+      - node-textfile:/textfile:ro
     pid: host
     read_only: true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:9100/metrics"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
     mem_limit: 128m
     cpus: 0.25
     restart: unless-stopped
 
   cadvisor:
     image: ghcr.io/google/cadvisor:0.60.6
+    # Only CPU, memory and filesystem are used by rules and dashboards; dropping the
+    # rest keeps scrapes fast on Docker Desktop, where disk usage scans are slow.
+    command:
+      - --docker_only=true
+      - --housekeeping_interval=15s
+      - --store_container_labels=false
+      - --disable_metrics=advtcp,cpu_topology,cpuset,diskIO,hugetlb,memory_numa,network,percpu,perf_event,process,referenced_memory,resctrl,sched,tcp,udp
     ports: ["8085:8080"]
     volumes:
       - /:/rootfs:ro
@@ -169,20 +182,8 @@ services:
     privileged: true
     read_only: true
     tmpfs: ["/tmp"]
-    mem_limit: 256m
-    cpus: 0.5
-    restart: unless-stopped
-
-  docker-exporter:
-    image: ghcr.io/dlepaux/docker-exporter:latest
-    group_add: ["0"]
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    expose:
-      - "9713"
-    read_only: true
-    mem_limit: 64m
-    cpus: 0.25
+    mem_limit: 384m
+    cpus: 1
     restart: unless-stopped
 
   otel-collector:
@@ -193,11 +194,9 @@ services:
       - ./monitoring/otel-collector.yml:/etc/otel/config.yml:ro
     depends_on:
       tempo: {condition: service_started}
-    healthcheck:
-      test: ["CMD", "/otelcol-contrib", "validate", "--config=/etc/otel/config.yml"]
-      interval: 20s
-      timeout: 5s
-      retries: 3
+    # The image is distroless (no shell or HTTP client), and `validate` takes about
+    # 20 s under this CPU limit, throttling the collector. Liveness comes from the
+    # Prometheus scrape of otel-collector:8888 and the TargetDown alert instead.
     read_only: true
     tmpfs: ["/tmp"]
     mem_limit: 256m
@@ -303,16 +302,24 @@ services:
       context: chaos
     command: ["sleep", "infinity"]
     profiles: ["chaos"]
+    # The root filesystem is read-only; stress-ng needs a writable working directory.
+    working_dir: /tmp
     healthcheck:
       test: ["CMD", "stress-ng", "--version"]
       interval: 30s
       timeout: 3s
       retries: 3
-    tmpfs: ["/tmp"]
+    # /scratch is a size-capped filesystem for the disk-fill scenario; its statfs
+    # numbers reach Prometheus through the node-exporter textfile collector.
+    tmpfs: ["/tmp", "/scratch:size=64m"]
+    volumes:
+      - node-textfile:/textfile
+    read_only: true
     mem_limit: 256m
     cpus: 0.5
 
 volumes:
+  node-textfile:
   prometheus-data:
   grafana-data:
   tempo-data:

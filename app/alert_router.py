@@ -1,15 +1,17 @@
+import hashlib
+import hmac
 import json
 import logging
 import os
 import re
 import time
-from collections import defaultdict, deque
+from collections import deque
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
 import requests
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Header, HTTPException
 from prometheus_client import Counter
 
 from app.observability import instrument
@@ -22,12 +24,13 @@ REJECTED_TICKETS = Counter(
 JIRA_MODE = os.getenv("INTEGRATION_MODE", "mock")
 _created_at: deque[float] = deque()
 _ticket_by_fingerprint: dict[str, str] = {}
-_last_results: list[dict[str, str | None]] = []
+# Recent routing results, newest last, so a check can find its alert even when
+# another group was routed after it.
+_last_results: deque[dict[str, str | None]] = deque(maxlen=50)
 _jira_base = os.getenv("JIRA_BASE_URL", "http://mock-jira:8080")
 _slack_url = os.getenv("SLACK_WEBHOOK_URL", "http://mock-slack:8080/webhook")
 _jira_auth: tuple[str, str] | None = None
-_transitions: dict[str, str] = {}
-
+_done_transition_id: str | None = None
 
 
 @asynccontextmanager
@@ -48,12 +51,10 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
             .json()
             .get("issues", [])
         )
-        if existing:
-            issue_key = str(existing[0].get("key", ""))
-            if issue_key:
-                _transitions[issue_key] = fetch_done_transition(issue_key)
+        if existing and existing[0].get("key"):
+            global _done_transition_id
+            _done_transition_id = fetch_done_transition(str(existing[0]["key"]))
     yield
-
 
 
 app = FastAPI(title="CloudOps Sentinel alert router", lifespan=lifespan)
@@ -75,6 +76,7 @@ def validate_configuration() -> None:
             "JIRA_API_TOKEN",
             "JIRA_PROJECT_KEY",
             "SLACK_WEBHOOK_URL",
+            "ROUTER_SHARED_TOKEN",
         )
         missing = [key for key in required if not os.getenv(key)]
         if missing:
@@ -151,6 +153,19 @@ def fetch_done_transition(issue_key: str) -> str:
     raise RuntimeError("Jira issue has no Done transition")
 
 
+def _close_issue(issue_key: str) -> None:
+    global _done_transition_id
+    path = f"/rest/api/3/issue/{issue_key}/transitions"
+    if _done_transition_id:
+        try:
+            jira_request("POST", path, json={"transition": {"id": _done_transition_id}})
+            return
+        except requests.HTTPError:
+            pass  # this issue uses another workflow; look its transition up
+    _done_transition_id = fetch_done_transition(issue_key)
+    jira_request("POST", path, json={"transition": {"id": _done_transition_id}})
+
+
 def _safe_label(value: str) -> str:
     return re.sub(r"[^a-zA-Z0-9_-]", "-", value)[:80]
 
@@ -167,8 +182,7 @@ def _search_ticket(fingerprint_label: str) -> str | None:
     if fingerprint_label in _ticket_by_fingerprint:
         return _ticket_by_fingerprint[fingerprint_label]
     project = os.getenv("JIRA_PROJECT_KEY", "MOCK")
-    jql = f'project = "{project}" AND labels = "{fingerprint_label}"'
-    
+    jql = f'project = "{project}" AND labels = "{fingerprint_label}" AND statusCategory != Done'
     result = jira_request(
         "GET",
         "/rest/api/3/search/jql",
@@ -210,7 +224,6 @@ def _post_slack(payload: dict[str, object]) -> str | None:
             time.sleep(min(2**attempt, 8))
             continue
         if response.status_code != 429:
-            
             if response.status_code >= 400:
                 logger.error(
                     json.dumps(
@@ -227,11 +240,12 @@ def _post_slack(payload: dict[str, object]) -> str | None:
                 json.dumps({"event": "slack_message_accepted", "status": response.status_code})
             )
             try:
-                body = response.json()
+                timestamp = response.json().get("ts")
             except requests.JSONDecodeError:
-                return None
-            timestamp = body.get("ts")
-            return str(timestamp) if timestamp is not None else None
+                timestamp = None
+            # Incoming webhooks answer a plain "ok" with no message ts, so record
+            # when Slack accepted the message instead.
+            return str(timestamp) if timestamp else _accepted_at(response)
         try:
             delay = min(max(float(response.headers.get("Retry-After", "1")), 0), 30)
         except ValueError:
@@ -248,6 +262,11 @@ def _post_slack(payload: dict[str, object]) -> str | None:
         if attempt < 2:
             time.sleep(delay)
     raise RuntimeError("Slack webhook remained rate limited after retries")
+
+
+def _accepted_at(response: requests.Response) -> str:
+    date = response.headers.get("Date") if hasattr(response, "headers") else None
+    return f"accepted {date or time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime())}"
 
 
 def process_alert(alert: dict[str, Any]) -> dict[str, str | None]:
@@ -276,23 +295,19 @@ def process_alert(alert: dict[str, Any]) -> dict[str, str | None]:
                     )
                 },
             )
-            transition_id = _transitions.get(issue_key) or fetch_done_transition(issue_key)
-            jira_request(
-                "POST",
-                f"/rest/api/3/issue/{issue_key}/transitions",
-                json={"transition": {"id": transition_id}},
-            )
+            _close_issue(issue_key)
+            _ticket_by_fingerprint.pop(fingerprint_label, None)
     elif issue_key:
         jira_request(
             "POST",
             f"/rest/api/3/issue/{issue_key}/comment",
             json={"body": _adf(f"Repeated firing alert: {summary}")},
         )
+    elif not _check_rate_limit():
+        # Answer 200 so Alertmanager does not retry; Slack still gets the alert.
+        REJECTED_TICKETS.inc()
+        logger.warning(json.dumps({"event": "ticket_rate_limited", "fingerprint": fingerprint}))
     else:
-        if not _check_rate_limit():
-            REJECTED_TICKETS.inc()
-            logger.warning(json.dumps({"event": "ticket_rate_limited", "fingerprint": fingerprint}))
-            raise HTTPException(status_code=429, detail="Jira issue creation rate limit reached")
         project = os.getenv("JIRA_PROJECT_KEY", "MOCK")
         issue = jira_request(
             "POST",
@@ -302,19 +317,24 @@ def process_alert(alert: dict[str, Any]) -> dict[str, str | None]:
                     "project": {"key": project},
                     "issuetype": {"name": "Task"},
                     "summary": f"[{severity.upper()}] {name}",
-                    "description": _adf(f"{summary}\nDashboard: {dashboard}\nRunbook: {runbook}"),
+                    "description": _adf(
+                        f"{summary}\nDashboard: {dashboard}\nRunbook: {runbook}"
+                        f"\nAlerts in group: {alert.get('count', 1)}"
+                    ),
                     "labels": [_safe_label(severity), _safe_label(service), fingerprint_label],
                 }
             },
         ).json()
         issue_key = str(issue["key"])
         _ticket_by_fingerprint[fingerprint_label] = issue_key
-        _transitions[issue_key] = fetch_done_transition(issue_key)
 
-    browse_base = os.getenv("JIRA_BROWSE_URL") or (
-        _jira_base if JIRA_MODE == "real" else "http://localhost:8092"
-    )
-    ticket_url = f"{browse_base.rstrip('/')}/browse/{issue_key}" if issue_key else ""
+    if JIRA_MODE == "real":
+        site = os.getenv("JIRA_BROWSE_URL") or _jira_base
+        browse_base = site.rstrip("/").removesuffix("/browse")
+    else:
+        # Never leak a real site from .env into mock results.
+        browse_base = "http://localhost:8092"
+    ticket_url = f"{browse_base}/browse/{issue_key}" if issue_key else ""
     status_text = "RESOLVED" if status == "resolved" else severity.upper()
     value = str(annotations.get("value", annotations.get("description", "")))
     text = f"[{status_text}] {summary}"
@@ -361,40 +381,51 @@ def process_alert(alert: dict[str, Any]) -> dict[str, str | None]:
         "slack_timestamp": slack_timestamp,
         "alertname": name,
         "status": status,
+        "routed_at": str(time.time()),
     }
 
 
 @app.get("/healthz")
 def health() -> dict[str, str]:
-    return {"status": "ok"}
+    return {"status": "ok", "mode": JIRA_MODE}
 
 
-@app.post("/webhook")
-async def webhook(request: Request) -> dict[str, object]:
+def _authorize(authorization: str | None) -> None:
     token = os.getenv("ROUTER_SHARED_TOKEN", "local-demo-token")
-    if request.headers.get("Authorization") != f"Bearer {token}":
+    if not hmac.compare_digest(authorization or "", f"Bearer {token}"):
         raise HTTPException(status_code=401, detail="invalid router token")
-    payload = await request.json()
-    results: list[dict[str, str | None]] = []
-    for alert in payload.get("alerts", []):
-        results.append(process_alert(alert))
-    _last_results[:] = results
+
+
+def group_alert(payload: dict[str, Any]) -> dict[str, Any]:
+    """Collapse an Alertmanager webhook group into one alert keyed by its groupKey."""
+    alerts = payload.get("alerts") or [{}]
+    group_key = str(payload.get("groupKey") or alerts[0].get("fingerprint", "unknown"))
+    firing = any(a.get("status", "firing") == "firing" for a in alerts)
+    return {
+        "fingerprint": hashlib.sha256(group_key.encode()).hexdigest()[:16],
+        "status": str(payload.get("status") or ("firing" if firing else "resolved")),
+        "labels": {**alerts[0].get("labels", {}), **payload.get("commonLabels", {})},
+        "annotations": {**alerts[0].get("annotations", {}), **payload.get("commonAnnotations", {})},
+        "count": len(alerts),
+    }
+
+
+# Plain def: FastAPI runs it in a worker thread, so blocking HTTP retries
+# never stall the event loop.
+@app.post("/webhook")
+def webhook(
+    payload: dict[str, Any], authorization: str | None = Header(default=None)
+) -> dict[str, object]:
+    _authorize(authorization)
+    results = [process_alert(group_alert(payload))] if payload.get("alerts") else []
+    _last_results.extend(results)
     return {"results": results}
 
 
 @app.get("/latest")
-def latest(request: Request) -> dict[str, object]:
-    token = os.getenv("ROUTER_SHARED_TOKEN", "local-demo-token")
-    if request.headers.get("Authorization") != f"Bearer {token}":
-        raise HTTPException(status_code=401, detail="invalid router token")
-    return {"results": _last_results}
-
-
-def _process_group(alerts: list[dict[str, Any]]) -> list[dict[str, str | None]]:
-    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    for alert in alerts:
-        grouped[str(alert.get("fingerprint", "unknown"))].append(alert)
-    return [process_alert(group[0]) for group in grouped.values()]
+def latest(authorization: str | None = Header(default=None)) -> dict[str, object]:
+    _authorize(authorization)
+    return {"results": list(_last_results)}
 
 
 instrument(app, "alert-router")

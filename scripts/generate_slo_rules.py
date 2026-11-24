@@ -116,6 +116,20 @@ def build_rules() -> dict[str, object]:
                     "sentinel-slo",
                 ),
                 _burn_alert(
+                    "ApiLatencyBurnCritical",
+                    "critical",
+                    "latency",
+                    latency_budget,
+                    "14.4",
+                    "5m",
+                    "1h",
+                    "2m",
+                    "API latency is burning the latency budget quickly",
+                    "The multi-window latency burn rate exceeds 14.4 times the 30-day budget.",
+                    "sentinel-slo",
+                    limit_text,
+                ),
+                _burn_alert(
                     "ApiLatencyBurnWarning",
                     "warning",
                     "latency",
@@ -190,7 +204,7 @@ def _burn_alert(
             "description": description,
             "value": '{{ printf "%.2f" $value }}',
             "runbook_url": (
-                "https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/"
+                "https://github.com/siiick-brain/cloudops-sentinel/blob/master/docs/runbooks/"
                 f"{name}.md"
             ),
             "dashboard_url": f"http://localhost:3000/d/{dashboard}",

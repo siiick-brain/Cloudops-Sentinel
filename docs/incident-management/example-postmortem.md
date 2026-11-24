@@ -1,30 +1,48 @@
 # Exercise postmortem: injected API latency
 
-Status: Exercise completed on 2026-10-27. The recorded run received successful Jira and Slack responses. Full live verification remains incomplete.
+Status: Exercise, not a production incident. Run on 2026-11-24 against real Jira Cloud and Slack. Times are measured; see [the live verification record](../live-verification.md).
 
-## Incident summary
+Severity: SEV3 by the [severity matrix](severity-matrix.md) (degraded latency, no data loss, exercise scope).
 
-The latency chaos scenario injected 600 ms of API latency. Prometheus raised `ApiHighLatency` and Alertmanager delivered the firing notification. The router returned a Jira issue URL and Slack accepted the message. The issue URL and Slack message timestamp are not recorded here. The runner cleared the injection after the integration checks completed.
+## Summary
 
-## Timeline
+The latency chaos scenario added 600 ms to every API request. `ApiHighLatency` fired 80 s later. Jira issue SCRUM-10 and the Slack firing message arrived 199 s after injection. After the fault was removed the alert resolved, the router commented on the issue, moved it to Done and posted the resolved message. The exercise also exposed a timing gap in the chaos runner, which is now fixed.
 
-All event times are UTC.
+## Timeline (UTC)
 
-| Event | Measured time |
+| Time | Event |
 |---|---|
-| Latency injection | 2026-10-27 runner result |
-| `ApiHighLatency` alert observed | 85.26 seconds after injection |
-| Jira and Slack responses confirmed by the same runner poll | 103.63 seconds after injection |
-| Recovery completed | 2026-10-27 21:46:08 UTC |
+| 12:33:27 | Latency injected through the authenticated `/chaos` endpoint |
+| 12:34:47 | `ApiHighLatency` active in Alertmanager (detection, 80 s) |
+| 12:36:18 | Runner stops waiting for integrations and removes the fault |
+| 12:36:46 | Jira issue SCRUM-10 created; Slack firing message accepted (notification, 199 s) |
+| 12:42:44 | Alert resolved; resolution comment added |
+| 12:42:46 | SCRUM-10 moved to Done; Slack resolved message accepted (recovery confirmed) |
 
-Evidence: [recorded results in the README](../../README.md#results).
+## Impact
 
-## Review
+Exercise only. During the 3 minutes of injection every order request took about 600 ms longer and API p95 rose to roughly 0.9 s, against a 300 ms objective. The latency SLO burn-rate alerts did not fire because the burn lasted minutes, below their 5-minute and 30-minute windows.
 
-The alert and both integration checks passed. The runner recorded one shared confirmation time, not separate Slack and Jira delivery times. This exercise does not measure customer impact. The full manual live verification record remains incomplete.
+## What went well
 
-## Follow-up actions
+- Detection took 80 s, inside the 30 s `for` duration plus the 5-minute rate window.
+- One issue was opened for the alert group and closed automatically on resolve, with the resolution time in a comment.
+- The Slack message carried the value, the runbook link and the Jira link.
 
-| Action | Owner | Due date | Status |
-|---|---|---|---|
-| Complete a live verification record with separate integration timing where available | Project operator | Before claiming full live verification | Not verified |
+## What went wrong
+
+- The runner waited 90 s for the ticket. Alertmanager knew this group from an earlier exercise and sent the new firing on its next `group_interval` tick, 120 s later, so the runner reported failure although the integrations worked.
+- The router had restarted just before the run, so it had no record that the group's earlier notification had not resolved yet.
+- Two resolved messages from earlier mock exercises reached the real Slack channel when the stack switched to real mode.
+
+## Root cause
+
+The runner's integration timeout was shorter than Alertmanager's `group_interval`. Notification latency for an existing group can reach `group_interval` plus `group_wait`.
+
+## Action items
+
+| Action | Owner | Status |
+|---|---|---|
+| Raise the integration wait to 180 s and test it against the Alertmanager config | Platform | Done |
+| Require the last routed notification for the alert to be resolved before injecting | Platform | Done |
+| Before a live run, wait for open mock alert groups to resolve so they do not post to the real channel | Operator | Done, documented in [integrations.md](../integrations.md) |

@@ -41,7 +41,7 @@ groups:
       summary: API availability is burning the error budget quickly
       description: The multi-window burn rate exceeds 14.4 times the 30-day budget.
       value: '{{ printf "%.2f" $value }}'
-      runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/ApiAvailabilityBurnCritical.md
+      runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/master/docs/runbooks/ApiAvailabilityBurnCritical.md
       dashboard_url: http://localhost:3000/d/sentinel-golden-signals
   - alert: ApiAvailabilityBurnWarning
     expr: (sum(rate(http_requests_total{service="api",status=~"5.."}[30m])) / clamp_min(sum(rate(http_requests_total{service="api"}[30m])),
@@ -55,7 +55,24 @@ groups:
       summary: API availability is consuming the error budget
       description: The multi-window burn rate exceeds 6 times the 30-day budget.
       value: '{{ printf "%.2f" $value }}'
-      runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/ApiAvailabilityBurnWarning.md
+      runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/master/docs/runbooks/ApiAvailabilityBurnWarning.md
+      dashboard_url: http://localhost:3000/d/sentinel-slo
+  - alert: ApiLatencyBurnCritical
+    expr: (1 - (sum(rate(http_request_duration_seconds_bucket{service="api",le="0.3"}[5m]))
+      / clamp_min(sum(rate(http_requests_total{service="api"}[5m])), 1e-9)) > 14.4
+      * 0.05) and (1 - (sum(rate(http_request_duration_seconds_bucket{service="api",le="0.3"}[1h]))
+      / clamp_min(sum(rate(http_requests_total{service="api"}[1h])), 1e-9)) > 14.4
+      * 0.05)
+    for: 2m
+    labels:
+      severity: critical
+      service: api
+    annotations:
+      summary: API latency is burning the latency budget quickly
+      description: The multi-window latency burn rate exceeds 14.4 times the 30-day
+        budget.
+      value: '{{ printf "%.2f" $value }}'
+      runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/master/docs/runbooks/ApiLatencyBurnCritical.md
       dashboard_url: http://localhost:3000/d/sentinel-slo
   - alert: ApiLatencyBurnWarning
     expr: (1 - (sum(rate(http_request_duration_seconds_bucket{service="api",le="0.3"}[30m]))
@@ -71,5 +88,5 @@ groups:
       summary: API latency is consuming the latency objective budget
       description: Fewer than 95 percent of API requests are under 300 ms.
       value: '{{ printf "%.2f" $value }}'
-      runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/ApiLatencyBurnWarning.md
+      runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/master/docs/runbooks/ApiLatencyBurnWarning.md
       dashboard_url: http://localhost:3000/d/sentinel-slo

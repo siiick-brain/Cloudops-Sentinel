@@ -20,9 +20,10 @@ foreach ($key in @("JIRA_BASE_URL", "JIRA_EMAIL", "JIRA_API_TOKEN", "JIRA_PROJEC
         exit 2
     }
 }
+$env:INTEGRATION_MODE = "real"
 docker compose up -d --build
 if ($LASTEXITCODE -ne 0) { throw "Compose start failed" }
-& $python chaos/run.py latency
+& $python chaos/run.py latency --live
 if ($LASTEXITCODE -ne 0) { throw "Live chaos scenario failed" }
 & $python scripts/live_result.py
 if ($LASTEXITCODE -ne 0) { throw "Live verification is incomplete" }

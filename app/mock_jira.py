@@ -18,11 +18,13 @@ def health() -> dict[str, str]:
 @app.get("/rest/api/3/search")
 @app.get("/rest/api/3/search/jql")
 def search(jql: str = "") -> dict[str, object]:
+    label = re.search(r'labels\s*=\s*"([^"]+)"', jql, re.IGNORECASE)
+    open_only = re.search(r"statusCategory\s*!=\s*Done", jql, re.IGNORECASE)
     matching = [
         {"key": key, "fields": issue["fields"]}
         for key, issue in issues.items()
-        if not re.search(r"labels\s*=", jql, re.IGNORECASE)
-        or any(label in jql for label in issue.get("labels", []))
+        if (not label or label.group(1) in issue.get("labels", []))
+        and not (open_only and "transition" in issue)
     ]
     return {"issues": matching, "total": len(matching)}
 

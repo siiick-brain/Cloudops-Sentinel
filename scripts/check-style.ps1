@@ -3,7 +3,7 @@ $root = Split-Path -Parent $PSScriptRoot
 $failed = $false
 $warned = $false
 $paths = Get-ChildItem -Path $root -Recurse -File -Filter *.md |
-    Where-Object { $_.FullName -notmatch '[\\/](private|\.git|\.venv)[\\/]' }
+    Where-Object { $_.FullName -notmatch '[\\/](private|\.git|\.venv|graphify-out)[\\/]' }
 $emDash = [char]0x2014
 $enDash = [char]0x2013
 
