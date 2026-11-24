@@ -10,13 +10,13 @@ permissions:
 
 jobs:
   checks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: "3.12"
       - name: Install test dependencies
@@ -47,7 +47,8 @@ jobs:
             /etc/prometheus/rules/slo.yml /etc/prometheus/rules/platform.yml
           docker run --rm --entrypoint=/bin/promtool \
             -v "$PWD/monitoring/prometheus:/etc/prometheus:ro" \
-            prom/prometheus:v3.3.0 test rules /etc/prometheus/rules/slo.test.yml
+            prom/prometheus:v3.3.0 test rules /etc/prometheus/rules/slo.test.yml \
+            /etc/prometheus/rules/platform.test.yml
       - name: Check Alertmanager configuration and routes
         run: |
           docker run --rm --entrypoint=/bin/amtool \
@@ -71,13 +72,13 @@ jobs:
             docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.59.1 image --exit-code 1 --severity CRITICAL,HIGH "$image"
           done
   authorship-and-style:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: "3.12"
       - name: Check writing style
@@ -87,14 +88,40 @@ jobs:
         run: python scripts/check_public_terms.py
 
   end-to-end:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      INTEGRATION_MODE: mock
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Install runner dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Start stack, send traffic, check trace, run latency chaos, check alert and mocks
+        run: sh scripts/demo.sh
+      - name: Show chaos result
+        if: always()
+        run: cat artifacts/chaos-results/latency.json || true
+      - name: Show service logs on failure
+        if: failure()
+        run: docker compose logs --tail 80 alert-router alertmanager prometheus api
+      - name: Stop stack
+        if: always()
+        run: docker compose down -v
+
+  deployment:
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       INTEGRATION_MODE: mock
       GRAFANA_ADMIN_PASSWORD: ci-only-test-password
       ROUTER_SHARED_TOKEN: ci-only-router-token
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
       - name: Validate production Compose configuration
