@@ -13,7 +13,8 @@ sequenceDiagram
   P->>A: Firing alert with labels and annotations
   A->>A: Group by alert name, service and severity
   A->>R: Authenticated firing webhook
-  R->>J: Search for fingerprint label
+  R->>R: Hash the group key into a fingerprint label
+  R->>J: Search open issues for the fingerprint label
   alt Issue already exists
     R->>J: Add repeat-firing comment
   else New issue
@@ -34,4 +35,4 @@ sequenceDiagram
   R-->>A: Return processing result
 ```
 
-Alertmanager groups by alert name, service and severity. The configured repeat interval is four hours. The router applies a Jira issue creation limit and retries transient Jira errors and Slack rate limits. The router caches the Jira Done transition when it creates an issue and applies that transition when the alert resolves. See [alerting.md](alerting.md) for silences and the maintenance mute.
+Alertmanager groups by alert name, service and severity. The configured repeat interval is four hours. The router opens one Jira issue per Alertmanager group, applies a Jira issue creation limit and retries transient Jira errors and Slack rate limits. It reads the Jira Done transition at start-up and applies it when the group resolves. See [alerting.md](alerting.md) for silences and the maintenance mute.

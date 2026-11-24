@@ -15,8 +15,7 @@ CloudOps Sentinel runs as Docker Compose services on one local host. Development
 | `grafana` | Dashboards and trace exploration | 3000 | Through Caddy |
 | `node-exporter` | Linux host metrics | 9100 | Internal only |
 | `cadvisor` | Container resource metrics | 8085 | Internal only |
-| `docker-exporter` | Docker Engine metrics | Internal port 9713 | Internal only |
-| `otel-collector` | Receives OTLP spans and exports traces and span metrics | 4317 and 4318 | Internal only |
+| `otel-collector` | Receives OTLP spans and exports traces and span metrics. No container healthcheck: the image is distroless and `validate` takes about 20 s under its CPU limit, so liveness comes from the Prometheus scrape and `TargetDown` | 4317 and 4318 | Internal only |
 | `tempo` | Trace storage and query API | 3200 | Internal only |
 | `toxiproxy` | Fault injection between the API and inventory | 8474 | Internal only |
 | `alert-router` | Authenticated webhook and Slack and Jira delivery | 8090 | Internal only |

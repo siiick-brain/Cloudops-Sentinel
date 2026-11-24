@@ -30,7 +30,7 @@ flowchart LR
 
 ## Start the deployment
 
-Create `.env` from `.env.example`, set `GRAFANA_ADMIN_PASSWORD` and `ROUTER_SHARED_TOKEN`. Set `INTEGRATION_MODE=mock` unless you intend to use real integrations. Then start the stack:
+Create `.env` from `.env.example`, set `GRAFANA_ADMIN_PASSWORD` and `ROUTER_SHARED_TOKEN`. Set `INTEGRATION_MODE=mock` unless you intend to use real integrations. The demo scripts and the chaos runner force mock mode anyway; only `scripts/live-demo.ps1` and `chaos/run.py --live` use real Slack and Jira. Then start the stack:
 
 ```powershell
 docker compose -f compose.prod.yml up -d --build

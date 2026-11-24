@@ -1,28 +1,21 @@
 # Verification scorecard
 
-Date: 2026-10-29
+Date: 2026-11-24
 
 | Area | Status | Evidence |
 |---|---|---|
-| Unit tests | Passed | `pytest -q`: 25 tests passed with 83.92 percent coverage on 2026-10-29 |
-| Ruff | Passed | `ruff check .` passed on 2026-10-29 |
-| Mypy | Passed | `mypy` passed on 2026-10-29 |
-| Style check | Passed | `scripts/check-style.ps1` passed on 2026-10-29 |
-| README image links | Passed | `scripts/check-readme-images.ps1` passed on 2026-10-29 |
-| Compose configuration | Passed | Development and production-style `docker compose config --quiet` checks passed on 2026-10-29 |
-| Prometheus and Alertmanager rules | Passed | `promtool check rules` found 13 rules in each file. Rule tests, Alertmanager config and the critical route check passed on 2026-10-29 |
-| Fresh-clone verification | Not current | The fresh clone was checked before the final documentation adjustments. The exact final commit was not cloned |
-| Demo script | Blocked | The 2026-10-29 run stopped before the demo or chaos check because port 8090 was already allocated. A fresh-checkout demo passed on 2026-10-28 |
-| Local deployment verification | Passed in recorded run | 25 checks on 2026-10-27; results are in `docs/deployment-verification.md` |
-| Docker storage driver | Confirmed in recorded run | `overlayfs` and `io.containerd.snapshotter.v1` were reported on 2026-10-28 |
-| cAdvisor container metrics | Passed in recorded run | Version 0.60.6 returned named API CPU and memory samples with the existing mounts |
-| Chaos scenarios | Mixed | Recorded results are listed in the README. Latency and disk-fill runs on 2026-10-29 did not confirm their expected alerts |
-| Live Slack and Jira | Partially verified | The manual exercise on 2026-10-27 recorded successful Jira requests and Slack HTTP 200 responses. Complete end-to-end live evidence is unavailable |
-| Workflow execution | Not verified | The workflow is configured. No workflow run is recorded |
-| Selected screenshots | Present | The README links the nine selected original screenshots. Every present PNG is under 500 KB |
-| Automated recapture | Not run | The selected original screenshots remain in the gallery. The demo could not start because port 8090 was already allocated |
-| Demo GIF | Missing | No GIF is present in `docs/images/` |
-| Working-tree secret scan | Findings | Gitleaks reported eight redacted matches in ignored `.env` and `.venv` files. Keep those local files out of commits |
-| Git history secret scan | No findings reported | `gitleaks git --log-opts="--all"` returned no findings and reported 20 commits scanned. A separate redacted Gitleaks scan of the `git log --all --full-history -p` stream scanned about 1.27 MB and found no leaks across the 68 reachable commits |
-| Author and message audit | Reviewed | All 68 reachable commits use the configured author identity. No `Co-authored-by` trailers were found. Older session-labeled subjects remain in history |
-| Publish readiness | Not verified | See the private publish checklist for scan details and remaining commands |
+| Unit tests | Passed | 53 tests, 96 percent coverage of `app/` (alert router 99 percent) on Python 3.12 |
+| Ruff and mypy (strict) | Passed | `ruff check .` and `mypy` |
+| YAML lint and Compose | Passed | `yamllint`, `docker compose config` for the development and production-style files |
+| Dashboard and SLO rule drift | Passed | Regenerated output matches the committed files |
+| Prometheus rules | Passed | `promtool check rules` (14 SLO and 13 platform rules) and `promtool test rules` for burn rates, disk alerts and the disk-fill alert |
+| Alertmanager | Passed | `amtool check-config` and the critical route test |
+| Runbook coverage | Passed | A test checks every alert has severity, summary, description and a runbook link to an existing file on `master` |
+| Stack health | Passed | All 14 services healthy and every Prometheus target up; cAdvisor scrapes take about 50 ms |
+| Chaos scenarios | Passed | All seven passed on 2026-11-24 against the mocks; timings are in the README results table |
+| Live Slack and Jira | Verified | 2026-11-24, SCRUM-10 created, commented and moved to Done; see `docs/live-verification.md` |
+| Secret scans | Passed | Gitleaks on the committed tree and on full history with `--log-opts=--all` |
+| Text audit | Passed | No prohibited terms in tracked files or commit messages; `scripts/check_public_terms.py` |
+| Style | Passed | `scripts/check-style.ps1` |
+| GitHub Actions | See the pull request | The workflow runs on every push; the README badge shows the latest `master` result |
+| Screenshots | Partial | Nine original screenshots are present. Slack, Jira, CI and runbook captures are listed in `docs/roadmap.md` |
