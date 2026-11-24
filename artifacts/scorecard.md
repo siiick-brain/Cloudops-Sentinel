@@ -18,4 +18,4 @@ Date: 2026-11-24
 | Text audit | Passed | No prohibited terms in tracked files or commit messages; `scripts/check_public_terms.py` |
 | Style | Passed | `scripts/check-style.ps1` |
 | GitHub Actions | See the pull request | The workflow runs on every push; the README badge shows the latest `master` result |
-| Screenshots | Partial | Grafana, Prometheus, Alertmanager and Tempo recaptured on 2026-11-24 during an injected fault. Slack, Jira, CI and runbook captures are listed in `docs/roadmap.md` |
+| Screenshots | Partial | Grafana, Prometheus, Alertmanager and Tempo recaptured on 2026-11-24 during an injected fault. Slack and Jira captured from the live run. CI and runbook captures are listed in `docs/roadmap.md` |

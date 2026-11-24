@@ -159,6 +159,16 @@ One latency exercise, taken from the mock receivers:
 3. It opens a Jira ticket with summary `[WARNING] ApiHighLatency`, labels `warning`, `api` and the group fingerprint `fp-63caf2f2f14a7f5e`. The description, in Atlassian Document Format, holds the summary, dashboard link, runbook link and the number of alerts in the group. A repeat firing adds a comment instead of a new ticket.
 4. When the alert clears, the router comments `Resolved at 2026-11-24T11:38:06Z.`, moves the ticket to Done and sends `*[RESOLVED] API p95 latency is above 300 ms*` with the same buttons.
 
+The live run on 2026-11-24 against real Slack and Jira:
+
+![Slack channel with the firing ApiHighLatency message and the resolved message, each with Dashboard, Runbook and Jira ticket buttons](docs/images/slack-alert-resolved.png)
+
+*Slack. The firing message (904.7 ms) and the resolved message for the same alert group.*
+
+![Jira issue SCRUM-10 with the alert summary, dashboard and runbook links and the resolution comment](docs/images/jira-ticket.png)
+
+*Jira issue SCRUM-10, opened by the router and closed with a resolution comment. The commenter's name is blurred.*
+
 ## Results
 
 All seven scenarios were run on 2026-11-24 against the mocks with `chaos/run.py`. Each run waits for steady state (the expected alert quiet and its last notification resolved), injects the fault, polls the Prometheus and Alertmanager APIs for the alert, then checks that the router delivered a Slack message and a Jira ticket. Raw results are written to `artifacts/chaos-results/`.
