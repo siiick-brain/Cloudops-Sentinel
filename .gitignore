@@ -31,3 +31,5 @@ artifacts/chaos-results/*
 dist/
 build/
 *.egg-info/
+graphify-out/
+artifacts/live-results/

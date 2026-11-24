@@ -9,6 +9,9 @@ if (-not (Test-Path $python)) {
 Write-Output "Checking Docker storage configuration"
 & "$PSScriptRoot\check-docker-storage.ps1"
 
+# Always mocks: overrides INTEGRATION_MODE from .env.
+$env:INTEGRATION_MODE = "mock"
+
 Write-Output "1/6 Starting services"
 docker compose up -d --build
 if ($LASTEXITCODE -ne 0) { throw "Compose start failed" }

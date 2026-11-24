@@ -16,6 +16,6 @@ for key in JIRA_BASE_URL JIRA_EMAIL JIRA_API_TOKEN JIRA_PROJECT_KEY SLACK_WEBHOO
         exit 2
     fi
 done
-docker compose up -d --build
-python chaos/run.py latency
+INTEGRATION_MODE=real docker compose up -d --build
+python chaos/run.py latency --live
 python scripts/live_result.py

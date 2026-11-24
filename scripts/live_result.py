@@ -38,18 +38,19 @@ def main() -> None:
     )
     if not result or not result.get("ticket_url"):
         raise RuntimeError("No Jira ticket result was returned by alert-router")
-    chaos_result = ROOT / "artifacts" / "chaos-results" / "latency.json"
+    chaos_result = ROOT / "artifacts" / "live-results" / "latency.json"
     measurements = json.loads(chaos_result.read_text(encoding="utf-8"))
     timestamp = result.get("slack_timestamp")
     now = datetime.now(UTC).date().isoformat()
     issue_key = result.get("issue_key", "Not returned")
-    state = "Verified" if timestamp else "Not verified, Slack webhook returned no message timestamp"
+    state = "Verified" if timestamp else "Not verified, Slack did not accept the message"
     content = (
         "# Live integration verification\n\n"
         f"Status: {state}.\n\n"
         f"Date: {now}.\n\n"
         f"Jira issue key: {issue_key}. The workspace URL is not stored here.\n\n"
-        f"Slack message timestamp: {timestamp or 'Not returned by incoming webhook'}.\n\n"
+        f"Slack: {timestamp or 'not accepted'}. Incoming webhooks return no message ts, "
+        "so this is the Date header of Slack's 200 response.\n\n"
         "Fault injection to ticket: "
         f"{measurements.get('ticket_seconds', 'Not measured')} seconds.\n"
     )
@@ -57,13 +58,13 @@ def main() -> None:
     print(f"Jira issue URL: {result['ticket_url']}")
     print(
         "Slack message timestamp: "
-        f"{timestamp or 'Not available from the incoming webhook response'}"
+        f"{timestamp or 'Slack did not accept the message'}"
     )
     print(
         f"Fault injection to ticket: {measurements.get('ticket_seconds', 'Not measured')} seconds"
     )
     if not timestamp:
-        raise RuntimeError("Slack incoming webhooks do not return a message timestamp")
+        raise RuntimeError("Slack did not accept the message")
 
 
 if __name__ == "__main__":

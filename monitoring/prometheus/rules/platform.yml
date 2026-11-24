@@ -8,8 +8,9 @@ groups:
         annotations:
           summary: API error rate is above 5 percent
           description: Check upstream health and recent deployments.
-          value: '{{ $value }}'
-          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/ApiHighErrorRate.md
+          value: '{{ $value | humanizePercentage }}'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/master/docs/runbooks/ApiHighErrorRate.md
+          dashboard_url: http://localhost:3000/d/sentinel-golden-signals
       - alert: ApiHighLatency
         expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{service="api"}[5m]))) > 0.3
         for: 30s
@@ -17,8 +18,9 @@ groups:
         annotations:
           summary: API p95 latency is above 300 ms
           description: Inspect dependency latency and request volume.
-          value: '{{ $value }}'
-          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/ApiHighLatency.md
+          value: '{{ $value | humanizeDuration }}'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/master/docs/runbooks/ApiHighLatency.md
+          dashboard_url: http://localhost:3000/d/sentinel-golden-signals
       - alert: TargetDown
         expr: up == 0
         for: 1m
@@ -26,8 +28,9 @@ groups:
         annotations:
           summary: A monitored target is down
           description: Inspect the target health and its container logs.
-          value: '{{ $value }}'
-          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/TargetDown.md
+          value: '{{ $labels.job }} down'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/master/docs/runbooks/TargetDown.md
+          dashboard_url: http://localhost:3000/d/sentinel-node-container
       - alert: NodeDown
         expr: up{job="node-exporter"} == 0
         for: 1m
@@ -35,8 +38,9 @@ groups:
         annotations:
           summary: Node exporter target is down
           description: The monitored Linux node is not reporting metrics.
-          value: '{{ $value }}'
-          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/NodeDown.md
+          value: '{{ $labels.instance }} down'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/master/docs/runbooks/NodeDown.md
+          dashboard_url: http://localhost:3000/d/sentinel-node-container
       - alert: ChaosContainerCpuHigh
         expr: sum by (name) (rate(container_cpu_usage_seconds_total{name=~".*chaos-tools.*"}[1m])) > 0.4
         for: 1m
@@ -44,8 +48,9 @@ groups:
         annotations:
           summary: Chaos container CPU usage is high
           description: The bounded CPU stress workload exceeded 0.4 CPU cores.
-          value: '{{ $value }}'
-          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/ChaosContainerCpuHigh.md
+          value: '{{ printf "%.2f" $value }} cores'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/master/docs/runbooks/ChaosContainerCpuHigh.md
+          dashboard_url: http://localhost:3000/d/sentinel-node-container
       - alert: ChaosContainerMemoryHigh
         expr: container_memory_working_set_bytes{name=~".*chaos-tools.*"} > 83886080
         for: 1m
@@ -53,17 +58,19 @@ groups:
         annotations:
           summary: Chaos container memory use is high
           description: The stress workload exceeded the 80 MiB alert threshold.
-          value: '{{ $value }}'
-          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/ChaosContainerMemoryHigh.md
+          value: '{{ $value | humanize1024 }}B'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/master/docs/runbooks/ChaosContainerMemoryHigh.md
+          dashboard_url: http://localhost:3000/d/sentinel-node-container
       - alert: ChaosContainerDiskHigh
-        expr: container_fs_usage_bytes{name=~".*chaos-tools.*"} > 52428800
-        for: 1m
+        expr: 1 - chaos_scratch_avail_bytes / chaos_scratch_size_bytes > 0.8
+        for: 30s
         labels: {severity: warning, service: container}
         annotations:
-          summary: Chaos container filesystem use is high
-          description: The bounded disk test exceeded the 50 MiB alert threshold.
-          value: '{{ $value }}'
-          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/ChaosContainerDiskHigh.md
+          summary: Chaos container filesystem is over 80 percent full
+          description: The bounded disk-fill test filled the 64 MiB scratch filesystem past 80 percent.
+          value: '{{ $value | humanizePercentage }}'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/master/docs/runbooks/ChaosContainerDiskHigh.md
+          dashboard_url: http://localhost:3000/d/sentinel-node-container
       - alert: NodeCpuHigh
         expr: 1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) > 0.9
         for: 1m
@@ -71,8 +78,9 @@ groups:
         annotations:
           summary: Node CPU utilization is above 90 percent
           description: Find the processes consuming CPU and compare recent load.
-          value: '{{ $value }}'
-          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/NodeCpuHigh.md
+          value: '{{ $value | humanizePercentage }}'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/master/docs/runbooks/NodeCpuHigh.md
+          dashboard_url: http://localhost:3000/d/sentinel-node-container
       - alert: NodeMemoryHigh
         expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.9
         for: 1m
@@ -80,29 +88,36 @@ groups:
         annotations:
           summary: Node memory utilization is above 90 percent
           description: Check memory pressure and container working sets.
-          value: '{{ $value }}'
-          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/NodeMemoryHigh.md
+          value: '{{ $value | humanizePercentage }}'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/master/docs/runbooks/NodeMemoryHigh.md
+          dashboard_url: http://localhost:3000/d/sentinel-node-container
       - alert: NodeDiskHigh
+        # Read-only filesystems (kernel headers, driver shares) are full by design.
         expr: >-
           (node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}
           - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"})
           / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"} > 0.85
+          and node_filesystem_readonly == 0
         for: 5m
         labels: {severity: warning, service: node}
         annotations:
           summary: Node disk use is above 85 percent
           description: Locate large files and review disk growth.
-          value: '{{ $value }}'
-          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/NodeDiskHigh.md
+          value: '{{ $value | humanizePercentage }}'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/master/docs/runbooks/NodeDiskHigh.md
+          dashboard_url: http://localhost:3000/d/sentinel-node-container
       - alert: NodeDiskFillingSoon
-        expr: predict_linear(node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"}[6h], 24 * 3600) < 0
+        expr: >-
+          predict_linear(node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"}[6h], 24 * 3600) < 0
+          and node_filesystem_readonly == 0
         for: 30m
         labels: {severity: warning, service: node}
         annotations:
           summary: Node filesystem is predicted to fill within 24 hours
           description: Review the observed growth rate and reclaim space.
-          value: '{{ $value }}'
-          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/NodeDiskFillingSoon.md
+          value: '{{ $value | humanize1024 }}B free in 24h'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/master/docs/runbooks/NodeDiskFillingSoon.md
+          dashboard_url: http://localhost:3000/d/sentinel-node-container
       - alert: PrometheusDown
         expr: absent(up{job="prometheus"} == 1)
         for: 1m
@@ -110,8 +125,9 @@ groups:
         annotations:
           summary: Prometheus target is unavailable
           description: Check Prometheus health and storage.
-          value: '{{ $value }}'
-          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/PrometheusDown.md
+          value: '{{ $labels.job }} down'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/master/docs/runbooks/PrometheusDown.md
+          dashboard_url: http://localhost:3000/d/sentinel-node-container
       - alert: AlertmanagerDown
         expr: absent(up{job="alertmanager"} == 1)
         for: 1m
@@ -119,5 +135,6 @@ groups:
         annotations:
           summary: Alertmanager target is unavailable
           description: Check Alertmanager health and configuration.
-          value: '{{ $value }}'
-          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/main/docs/runbooks/AlertmanagerDown.md
+          value: '{{ $labels.job }} down'
+          runbook_url: https://github.com/siiick-brain/cloudops-sentinel/blob/master/docs/runbooks/AlertmanagerDown.md
+          dashboard_url: http://localhost:3000/d/sentinel-node-container

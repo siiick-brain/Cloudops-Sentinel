@@ -16,7 +16,14 @@ def test_every_alert_has_runbook():
             for rule in group["rules"]:
                 if "alert" in rule:
                     alert_names.append(rule["alert"])
-                    assert rule["annotations"].get("runbook_url")
+                    annotations = rule["annotations"]
+                    for key in ("summary", "description", "runbook_url"):
+                        assert annotations.get(key), (rule["alert"], key)
+                    assert rule["labels"].get("severity") in {"warning", "critical"}
+                    # The repository's default branch is master; main links 404.
+                    assert annotations["runbook_url"].endswith(
+                        f"/blob/master/docs/runbooks/{rule['alert']}.md"
+                    ), rule["alert"]
     runbooks = {path.stem for path in (ROOT / "docs" / "runbooks").glob("*.md")}
     assert set(alert_names) <= runbooks
 

@@ -13,6 +13,11 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS = ROOT / "artifacts" / "chaos-results"
+# Live results hold real Jira URLs, so they go to a gitignored folder.
+LIVE_RESULTS = ROOT / "artifacts" / "live-results"
+# A group Alertmanager already knows is re-notified on its next group_interval tick
+# (120 s), plus group_wait (20 s) for a new group. Wait past both.
+INTEGRATION_TIMEOUT = 180
 
 
 def load_local_env() -> None:
@@ -35,7 +40,21 @@ PROMETHEUS = os.getenv("PROMETHEUS_URL", "http://localhost:9090")
 ALERTMANAGER = os.getenv("ALERTMANAGER_URL", "http://localhost:9093")
 ROUTER_TOKEN = os.getenv("ROUTER_SHARED_TOKEN", "local-demo-token")
 CHAOS_TOKEN = os.getenv("CHAOS_TOKEN", "local-demo-token")
-INTEGRATION_MODE = os.getenv("INTEGRATION_MODE", "mock")
+# Mock unless --live is passed, whatever .env says, so a demo cannot reach real Slack or Jira.
+INTEGRATION_MODE = "mock"
+
+
+# Fill 60 of the 64 MiB scratch filesystem, then publish its statfs numbers for the
+# node-exporter textfile collector every 5 s. Written to a temp file and renamed so a
+# scrape never reads half a file.
+DISK_FILL = (
+    "dd if=/dev/zero of=/scratch/fill bs=1M count=60 2>/dev/null; "
+    "end=$(( $(date +%s) + {duration} )); "
+    "while [ $(date +%s) -lt $end ]; do "
+    "df -P -k /scratch | awk 'NR==2 {{print \"chaos_scratch_size_bytes \" $2*1024; "
+    "print \"chaos_scratch_avail_bytes \" $4*1024}}' > /textfile/chaos.prom.tmp "
+    "&& mv /textfile/chaos.prom.tmp /textfile/chaos.prom; sleep 5; done"
+)
 
 
 def docker(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -78,11 +97,7 @@ def inject(scenario: str, duration: int) -> None:
                 "--timeout",
                 f"{duration}s",
             ],
-            "disk-fill": [
-                "sh",
-                "-c",
-                "dd if=/dev/zero of=/bounded-file bs=1M count=64 && sleep 180",
-            ],
+            "disk-fill": ["sh", "-c", DISK_FILL.format(duration=duration)],
         }[scenario]
         docker("exec", "-d", "chaos-tools", *command)
     elif scenario == "network-delay":
@@ -115,7 +130,7 @@ def recover(scenario: str) -> None:
             "http://localhost:8474/proxies/inventory/toxics/latency", timeout=10
         ).raise_for_status()
     elif scenario == "disk-fill":
-        docker("exec", "chaos-tools", "rm", "-f", "/bounded-file")
+        docker("exec", "chaos-tools", "rm", "-f", "/scratch/fill", "/textfile/chaos.prom")
         docker("stop", "chaos-tools")
     elif scenario in {"cpu-stress", "memory-pressure"}:
         docker("stop", "chaos-tools")
@@ -130,15 +145,19 @@ def alert_is_active(alert_name: str) -> bool:
 def wait_for_alert(alert_name: str, timeout: int) -> float:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        if alert_is_active(alert_name):
-            return time.monotonic()
+        try:
+            if alert_is_active(alert_name):
+                return time.monotonic()
+        except requests.RequestException:
+            pass  # Alertmanager briefly unreachable; keep polling until the deadline
         time.sleep(5)
     raise TimeoutError(f"Expected alert did not fire: {alert_name}")
 
 
 def find_firing_result(
-    results: list[dict[str, Any]], alert_name: str
+    results: list[dict[str, Any]], alert_name: str, since: float = 0
 ) -> dict[str, Any]:
+    """Newest firing result for the alert that was routed after `since` (unix time)."""
     return next(
         (
             item
@@ -146,12 +165,49 @@ def find_firing_result(
             if item.get("alertname") == alert_name
             and item.get("status") == "firing"
             and item.get("ticket_url")
+            and float(item.get("routed_at") or 0) >= since
         ),
         {},
     )
 
 
-def check_integrations(alert_name: str) -> tuple[dict[str, bool], dict[str, str | None]]:
+def wait_for_steady_state(alert_name: str, timeout: int) -> None:
+    """Wait until the expected alert is quiet before injecting the fault."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            if not alert_is_active(alert_name) and not routed_as_firing(alert_name):
+                return
+        except requests.RequestException:
+            pass
+        time.sleep(10)
+    raise RuntimeError(f"Steady state not reached: {alert_name} is still active before injection")
+
+
+def routed_as_firing(alert_name: str) -> bool:
+    """True until the router has seen the resolved notification for the alert.
+
+    Alertmanager sends "resolved" on its next group_interval tick. If the fault is
+    injected again before then, the group never looked resolved, so Alertmanager
+    sends nothing new and the run would wait for a webhook that never comes.
+    """
+    response = requests.get(
+        "http://localhost:8090/latest",
+        headers={"Authorization": f"Bearer {ROUTER_TOKEN}"},
+        timeout=5,
+    )
+    response.raise_for_status()
+    statuses = [
+        item.get("status")
+        for item in response.json().get("results", [])
+        if item.get("alertname") == alert_name
+    ]
+    return bool(statuses) and statuses[-1] == "firing"
+
+
+def check_integrations(
+    alert_name: str, since: float = 0
+) -> tuple[dict[str, bool], dict[str, str | None]]:
     prom = requests.get(
         f"{PROMETHEUS}/api/v1/alerts",
         timeout=5,
@@ -168,13 +224,12 @@ def check_integrations(alert_name: str) -> tuple[dict[str, bool], dict[str, str 
     )
     latest.raise_for_status()
     results = latest.json().get("results", [])
-    routed = find_firing_result(results, alert_name)
+    routed = find_firing_result(results, alert_name, since)
     checks = {
         "prometheus": prometheus_active,
         "alertmanager": alert_is_active(alert_name),
         "jira": bool(routed.get("ticket_url")),
-        "slack": bool(routed)
-        and (INTEGRATION_MODE == "real" or bool(routed.get("slack_timestamp"))),
+        "slack": bool(routed.get("slack_timestamp")),
     }
     if INTEGRATION_MODE == "mock":
         jira = requests.get(
@@ -191,17 +246,29 @@ def check_integrations(alert_name: str) -> tuple[dict[str, bool], dict[str, str 
 
 
 def wait_for_integrations(
-    alert_name: str, timeout: int
+    alert_name: str, timeout: int, since: float = 0
 ) -> tuple[dict[str, bool], dict[str, str | None]]:
     deadline = time.monotonic() + timeout
     checks: dict[str, bool] = {}
     routed: dict[str, str | None] = {}
     while time.monotonic() < deadline:
-        checks, routed = check_integrations(alert_name)
+        try:
+            checks, routed = check_integrations(alert_name, since)
+        except requests.RequestException:
+            time.sleep(3)
+            continue
         if all(checks.values()):
             return checks, routed
         time.sleep(3)
     return checks, routed
+
+
+def check_router_mode() -> None:
+    mode = requests.get("http://localhost:8090/healthz", timeout=5).json().get("mode")
+    if mode != INTEGRATION_MODE:
+        flag = "pass --live" if mode == "real" else "restart with INTEGRATION_MODE=real"
+        raise RuntimeError(f"alert-router runs in {mode} mode but the runner expects "
+                           f"{INTEGRATION_MODE}; {flag}")
 
 
 def run(scenario: str, duration_override: int | None = None) -> dict[str, Any]:
@@ -222,12 +289,15 @@ def run(scenario: str, duration_override: int | None = None) -> dict[str, Any]:
         "status": "failed",
     }
     try:
+        check_router_mode()
+        wait_for_steady_state(expected, 600)
+        injected_at = time.time()
         inject(scenario, duration)
         injection_time = time.monotonic()
         result["injection_seconds"] = injection_time - start
         fired_at = wait_for_alert(expected, duration)
         result["alert_seconds"] = fired_at - injection_time
-        checks, routed = wait_for_integrations(expected, 90)
+        checks, routed = wait_for_integrations(expected, INTEGRATION_TIMEOUT, injected_at)
         result["integration_checks"] = checks
         result["ticket_seconds"] = time.monotonic() - injection_time
         result["ticket_url"] = routed.get("ticket_url")
@@ -235,11 +305,15 @@ def run(scenario: str, duration_override: int | None = None) -> dict[str, Any]:
         if not all(result["integration_checks"].values()):
             raise RuntimeError(f"An integration check did not pass: {result['integration_checks']}")
         result["status"] = "passed"
+    except Exception as exc:
+        result["error"] = f"{type(exc).__name__}: {exc}"
+        raise
     finally:
         recover(scenario)
         result["completed_at"] = datetime.now(UTC).isoformat()
-        RESULTS.mkdir(parents=True, exist_ok=True)
-        (RESULTS / f"{scenario}.json").write_text(
+        folder = LIVE_RESULTS if INTEGRATION_MODE == "real" else RESULTS
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / f"{scenario}.json").write_text(
             json.dumps(result, indent=2) + "\n", encoding="utf-8"
         )
     return result
@@ -267,7 +341,14 @@ def main() -> None:
             "its configured default"
         ),
     )
+    parser.add_argument(
+        "--live",
+        action="store_true",
+        help="Check real Slack and Jira instead of the mocks (needs INTEGRATION_MODE=real)",
+    )
     args = parser.parse_args()
+    global INTEGRATION_MODE
+    INTEGRATION_MODE = "real" if args.live else "mock"
     try:
         result = run(args.scenario, args.duration_seconds)
     except Exception as exc:

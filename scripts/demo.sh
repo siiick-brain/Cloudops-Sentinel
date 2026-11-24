@@ -1,6 +1,8 @@
 #!/usr/bin/env sh
 set -eu
 cd "$(dirname "$0")/.."
+# Always mocks: overrides INTEGRATION_MODE from .env.
+export INTEGRATION_MODE=mock
 printf '%s\n' "1/6 Starting services"
 docker compose up -d --build
 printf '%s\n' "2/6 Waiting for service and target readiness"
