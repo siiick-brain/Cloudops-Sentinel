@@ -2,7 +2,8 @@ import subprocess
 import sys
 
 TERMS = ["ag" + "ent", "pro" + "mpt", "sk" + "ill", "cl" + "aude", "co" + "pilot", "chat" + "gpt"]
-EXPECTED_AUTHOR = "devasoka38@gmail.com"
+# Older commits use the Gmail address; new ones use the GitHub noreply address.
+EXPECTED_AUTHORS = {"devasoka38@gmail.com", "187153867+siiick-brain@users.noreply.github.com"}
 
 
 def tracked_paths() -> list[str]:
@@ -48,7 +49,7 @@ def main() -> int:
             text=True,
             encoding="utf-8",
         )
-        invalid = [email for email in authors.stdout.splitlines() if email != EXPECTED_AUTHOR]
+        invalid = [email for email in authors.stdout.splitlines() if email not in EXPECTED_AUTHORS]
         if invalid:
             errors.append("A commit has an author email outside the configured owner identity")
     if errors:

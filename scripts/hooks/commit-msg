@@ -6,7 +6,10 @@ if grep -qiE '^[[:space:]]*Co-authored-by:' "$1"; then
 fi
 
 author_email=${GIT_AUTHOR_EMAIL:-$(git config user.email)}
-if [ "$author_email" != "devasoka38@gmail.com" ]; then
-    echo "Commit rejected: author email must be devasoka38@gmail.com." >&2
-    exit 1
-fi
+case "$author_email" in
+    devasoka38@gmail.com|187153867+siiick-brain@users.noreply.github.com) ;;
+    *)
+        echo "Commit rejected: author email must be the owner's Gmail or GitHub noreply address." >&2
+        exit 1
+        ;;
+esac
