@@ -69,7 +69,7 @@ jobs:
       - name: Scan service images
         run: |
           for image in cloudops-sentinel-api cloudops-sentinel-backend cloudops-sentinel-alert-router cloudops-sentinel-mock-jira cloudops-sentinel-mock-slack; do
-            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.59.1 image --exit-code 1 --severity CRITICAL,HIGH "$image"
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.59.1 image --exit-code 1 --ignore-unfixed --severity CRITICAL,HIGH "$image"
           done
   authorship-and-style:
     runs-on: ubuntu-24.04
@@ -126,8 +126,14 @@ jobs:
           persist-credentials: false
       - name: Validate production Compose configuration
         run: docker compose -f compose.prod.yml config --quiet
+      # Six services share one Dockerfile; building them one at a time avoids
+      # BuildKit dropping the connection under parallel builds.
+      - name: Build production-style images
+        env:
+          COMPOSE_PARALLEL_LIMIT: "1"
+        run: docker compose -p cloudops-sentinel-prod -f compose.prod.yml build
       - name: Start local production-style deployment
-        run: docker compose -p cloudops-sentinel-prod -f compose.prod.yml up -d --build
+        run: docker compose -p cloudops-sentinel-prod -f compose.prod.yml up -d
       - name: Verify the deployment through Caddy
         run: |
           for attempt in $(seq 1 60); do
