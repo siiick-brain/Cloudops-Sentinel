@@ -4,7 +4,7 @@ Date: 2026-11-24
 
 | Area | Status | Evidence |
 |---|---|---|
-| Unit tests | Passed | 53 tests, 96 percent coverage of `app/` (alert router 99 percent) on Python 3.12 |
+| Unit tests | Passed | 54 tests, 96 percent coverage of `app/` (alert router 99 percent) on Python 3.12 |
 | Ruff and mypy (strict) | Passed | `ruff check .` and `mypy` |
 | YAML lint and Compose | Passed | `yamllint`, `docker compose config` for the development and production-style files |
 | Dashboard and SLO rule drift | Passed | Regenerated output matches the committed files |
@@ -18,4 +18,4 @@ Date: 2026-11-24
 | Text audit | Passed | No prohibited terms in tracked files or commit messages; `scripts/check_public_terms.py` |
 | Style | Passed | `scripts/check-style.ps1` |
 | GitHub Actions | See the pull request | The workflow runs on every push; the README badge shows the latest `master` result |
-| Screenshots | Partial | Nine original screenshots are present. Slack, Jira, CI and runbook captures are listed in `docs/roadmap.md` |
+| Screenshots | Partial | Grafana, Prometheus, Alertmanager and Tempo recaptured on 2026-11-24 during an injected fault. Slack, Jira, CI and runbook captures are listed in `docs/roadmap.md` |

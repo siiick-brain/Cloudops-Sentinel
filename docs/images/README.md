@@ -15,7 +15,7 @@ Statuses reflect files present in this checkout. Terminal captures are rendered 
 | `demo-run.png` | Present | `scripts/capture-all.ps1` | After demo changes | rendered from captured command output |
 | `gitleaks-history.png` | Present | `scripts/capture-all.ps1` | Before publishing | rendered from captured command output |
 | `grafana-distributed-traces.png` | Present | `scripts/capture-all.ps1` | After tracing changes | Grafana distributed traces dashboard |
-| `grafana-exemplar.png` | Missing | `scripts/capture-all.ps1` | When Prometheus has exemplars | Grafana Explore exemplar view |
+| `grafana-exemplar.png` | Present | `scripts/capture-all.ps1` | When Prometheus has exemplars | Grafana Explore exemplar view |
 | `grafana-golden-signals.png` | Present | `scripts/capture-all.ps1` | After generating traffic | Grafana golden signals dashboard |
 | `grafana-node-container-health.png` | Present | `scripts/capture-all.ps1` | When metrics are available | Grafana node and container health dashboard |
 | `grafana-slo-error-budget.png` | Present | `scripts/capture-all.ps1` | After a measured SLO exercise | Grafana SLO dashboard |

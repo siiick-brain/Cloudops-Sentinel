@@ -35,7 +35,17 @@ PANELS = {
     ],
     "node-container": [
         ("Node CPU", '1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m]))', "ratio"),
-        ("Container memory", "sum(container_memory_working_set_bytes) by (name)", "bytes"),
+        (
+            "Container memory",
+            'sum by (name) (container_memory_working_set_bytes{name=~"cloudops-sentinel.*"})',
+            "bytes",
+        ),
+        (
+            "Container CPU",
+            "sum by (name) "
+            '(rate(container_cpu_usage_seconds_total{name=~"cloudops-sentinel.*"}[1m]))',
+            "cores",
+        ),
     ],
     "traces": [
         (

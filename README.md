@@ -177,43 +177,55 @@ Alert time includes the Prometheus rate window, each rule's `for` duration and t
 
 ## Screenshots
 
-The gallery uses the original selected screenshots. Automated captures are listed separately in the [image status list](docs/images/README.md).
+Captured on 2026-11-24 while 600 ms of latency and a 20 percent error rate were injected into the API. Every capture is listed with its command in the [image status list](docs/images/README.md).
 
-![Grafana golden signals dashboard with request rate and API latency plots](docs/images/grafana-golden-signals.png)
+![Grafana golden signals dashboard with request rate, error rate and API p95 latency during injected latency](docs/images/grafana-golden-signals.png)
 
-*Grafana golden signals. The error-rate panel had no recorded data in this capture.*
+*Golden signals. p95 latency climbs past 900 ms and the error rate rises once the fault is injected.*
 
-![Grafana distributed traces dashboard with API and inventory span rates](docs/images/grafana-distributed-traces.png)
+![Grafana API p95 latency panel with an exemplar tooltip showing a trace ID and a Trace link](docs/images/grafana-exemplar.png)
 
-*Grafana trace rates for the API and inventory services.*
+*An exemplar on the latency panel. The tooltip carries the trace ID of a 612 ms request and links straight to it in Tempo.*
 
-![Grafana node and container health dashboard with CPU and memory plots](docs/images/grafana-node-container-health.png)
+![Tempo trace view of one request spanning the api and inventory services](docs/images/tempo-trace.png)
 
-*Grafana node CPU and container memory metrics.*
+*One `GET /orders/{sku}` request in Tempo, from the API through Toxiproxy to the inventory service.*
 
-![Grafana SLO dashboard with latency objective and remaining budget plots](docs/images/grafana-slo-error-budget.png)
+![Grafana SLO dashboard with availability and latency objectives and remaining error budgets](docs/images/grafana-slo-error-budget.png)
 
-*Grafana SLO and remaining latency budget. The availability panel had no recorded data in this capture.*
+*SLOs and error budgets. The availability budget is below zero because the chaos exercises used it up.*
 
-![Prometheus target health page showing scrape targets up](docs/images/prometheus-targets-up.png)
+![Grafana node and container health dashboard with node CPU, container memory and container CPU](docs/images/grafana-node-container-health.png)
 
-*Prometheus target health page.*
+*Node CPU, plus memory and CPU for each container in the stack.*
 
-![Prometheus query graph showing container CPU usage over time](docs/images/prometheus-container-cpu-metrics.png)
+![Grafana distributed traces dashboard with span rates for api and inventory](docs/images/grafana-distributed-traces.png)
 
-*Prometheus container CPU metrics.*
+*Span rates per service from the collector's span metrics.*
 
-![Prometheus rules page showing alert rules and their current states](docs/images/prometheus-alert-rules.png)
+![Prometheus alerts page with ApiHighErrorRate and ApiHighLatency firing](docs/images/prometheus-cpu-alert-firing.png)
 
-*Prometheus platform alert rules.*
+*Prometheus with `ApiHighErrorRate` and `ApiHighLatency` firing.*
 
-![Prometheus firing NodeDiskHigh alerts with labels and runbook details](docs/images/prometheus-cpu-alert-firing.png)
+![Alertmanager alerts page with two alert groups routed to sentinel-warning](docs/images/alertmanager-group.png)
 
-*Prometheus alert page. This captured alert is NodeDiskHigh, despite the existing image filename.*
+*Alertmanager groups the two alerts by name, service and severity and routes them to the warning receiver.*
+
+![Prometheus target health page with every target up](docs/images/prometheus-targets-up.png)
+
+*Every scrape target up.*
+
+![Prometheus graph of CPU usage per stack container](docs/images/prometheus-container-cpu-metrics.png)
+
+*cAdvisor CPU usage per container. The gaps are stack restarts.*
+
+![Prometheus rule health page with all platform rules evaluating](docs/images/prometheus-alert-rules.png)
+
+*Rule health for the platform alerts.*
 
 ![Terminal capture showing Compose startup and service health output](docs/images/P2-16-deployment-verification.png)
 
-*Compose startup output from the original deployment capture.*
+*Compose startup output from the deployment check.*
 
 ## Operations docs
 
